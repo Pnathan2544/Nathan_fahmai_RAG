@@ -1,0 +1,7 @@
+voyageai>=0.3.0
+openai>=1.30.0       # used for Typhoon client (OpenAI-compatible API)
+voyageai>=0.3.0      # used for embeddings (voyage-3-large)
+faiss-cpu>=1.7.4
+numpy>=1.24.0
+pandas>=2.0.0
+ 
