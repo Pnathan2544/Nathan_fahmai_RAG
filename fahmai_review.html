@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FahMai — Question Review</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2333;
+    --border: #2a2f45;
+    --border2: #343a52;
+    --text: #e2e6f3;
+    --text2: #8892b0;
+    --text3: #4a5278;
+    --accent: #5b7cfa;
+    --accent-dim: rgba(91,124,250,0.12);
+    --accent-border: rgba(91,124,250,0.35);
+    --green: #3ecf8e;
+    --green-dim: rgba(62,207,142,0.10);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.10);
+    --red: #f06060;
+    --red-dim: rgba(240,96,96,0.10);
+    --choice9: #a78bfa;
+    --choice9-dim: rgba(167,139,250,0.10);
+    --choice10: #fb923c;
+    --choice10-dim: rgba(251,146,60,0.10);
+    --font: 'IBM Plex Sans Thai', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #sidebar-header {
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  #sidebar-header h1 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  #progress-bar-wrap {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 6px;
+  }
+  #progress-bar {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+  #progress-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  #q-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    align-content: start;
+  }
+  #q-grid::-webkit-scrollbar { width: 4px; }
+  #q-grid::-webkit-scrollbar-track { background: transparent; }
+  #q-grid::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .q-dot {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text3);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .q-dot:hover { border-color: var(--border2); color: var(--text2); }
+  .q-dot.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .q-dot.answered { background: var(--green-dim); border-color: rgba(62,207,142,0.3); color: var(--green); }
+  .q-dot.answered.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+  .q-dot.choice9 { background: var(--choice9-dim); border-color: rgba(167,139,250,0.3); color: var(--choice9); }
+  .q-dot.choice10 { background: var(--choice10-dim); border-color: rgba(251,146,60,0.3); color: var(--choice10); }
+
+  #sidebar-footer {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .legend {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text2);
+    font-family: var(--mono);
+  }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 2px;
+  }
+
+  /* ── MAIN ── */
+  #main {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  #main::-webkit-scrollbar { width: 6px; }
+  #main::-webkit-scrollbar-track { background: transparent; }
+  #main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  #q-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  #q-id-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+  }
+  #q-category-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .cat-product { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
+  .cat-policy  { background: var(--amber-dim);  color: var(--amber);  border: 1px solid rgba(245,166,35,0.3); }
+  .cat-math    { background: var(--red-dim);     color: var(--red);    border: 1px solid rgba(240,96,96,0.3); }
+  .cat-noinfo  { background: var(--choice9-dim); color: var(--choice9);border: 1px solid rgba(167,139,250,0.3); }
+  .cat-offtopic{ background: var(--choice10-dim);color: var(--choice10);border: 1px solid rgba(251,146,60,0.3); }
+
+  #nav-btns { margin-left: auto; display: flex; gap: 6px; }
+  .nav-btn {
+    padding: 5px 14px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  #q-body {
+    padding: 28px 28px 0;
+    flex: 1;
+  }
+
+  #q-text {
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.65;
+    color: var(--text);
+    margin-bottom: 28px;
+    padding: 20px 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    border-left: 3px solid var(--accent);
+  }
+
+  #choices-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .choice-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    font-family: var(--font);
+    color: var(--text);
+  }
+  .choice-btn:hover { border-color: var(--border2); background: var(--surface2); }
+  .choice-btn.selected {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+  }
+  .choice-btn.c9.selected { background: var(--choice9-dim); border-color: var(--choice9); }
+  .choice-btn.c10.selected { background: var(--choice10-dim); border-color: var(--choice10); }
+
+  .choice-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    min-width: 18px;
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+  .choice-btn.selected .choice-num { color: var(--accent); }
+  .choice-btn.c9.selected .choice-num { color: var(--choice9); }
+  .choice-btn.c10.selected .choice-num { color: var(--choice10); }
+
+  .choice-text {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text2);
+  }
+  .choice-btn.selected .choice-text { color: var(--text); }
+
+  .choice-special { opacity: 0.65; }
+  .choice-btn:hover .choice-special { opacity: 1; }
+  .choice-btn.selected.choice-special { opacity: 1; }
+
+  #q-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 12px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  #current-answer {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+  #current-answer span { color: var(--green); font-weight: 600; }
+  .clear-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    background: none;
+    border: 1px solid rgba(240,96,96,0.25);
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .clear-btn:hover { background: var(--red-dim); }
+  #export-btn {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--green);
+    color: #0a1a10;
+    border: none;
+    padding: 7px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    letter-spacing: 0.04em;
+  }
+  #export-btn:hover { opacity: 0.85; }
+  #export-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* ── IMPORT / FLAG / COMMENT ── */
+  #import-btn {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    padding: 6px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  #import-btn:hover { background: var(--accent-dim); }
+
+  .flag-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(245,166,35,0.3);
+    background: none;
+    color: var(--amber);
+    transition: all 0.15s;
+  }
+  .flag-btn:hover { background: var(--amber-dim); }
+  .flag-btn.flagged { background: var(--amber-dim); border-color: var(--amber); font-weight: 600; }
+
+  .q-dot.flagged::after {
+    content: '';
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+  .q-dot { position: relative; }
+
+  #comment-wrap {
+    padding: 0 28px 16px;
+  }
+  #comment-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 10px 12px;
+    resize: vertical;
+    min-height: 60px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #comment-input:focus { border-color: var(--border2); }
+  #comment-input::placeholder { color: var(--text3); }
+
+  /* ── JUMP INPUT ── */
+  #jump-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  #jump-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+  }
+  #jump-input:focus { border-color: var(--accent); }
+  #jump-input::placeholder { color: var(--text3); }
+  #jump-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #jump-btn:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>FahMai Review</h1>
+    <div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+    <div id="progress-text">0 / 100 answered</div>
+  </div>
+  <div id="jump-wrap">
+    <input id="jump-input" type="number" min="1" max="100" placeholder="Go to Q#">
+    <button id="jump-btn" onclick="jumpTo()">Go</button>
+  </div>
+  <div id="q-grid"></div>
+  <div id="sidebar-footer">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#3ecf8e"></div>answered</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>→ 9</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div>→ 10</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2a2f45"></div>blank</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f5a623;border-radius:50%"></div>flagged</div>
+    </div>
+    <label id="import-btn" title="Import submission.csv (id,answer)">
+      <input type="file" id="import-input" accept=".csv" style="display:none" onchange="importCSV(this)">
+      Import CSV
+    </label>
+  </div>
+</div>
+
+<div id="main">
+  <div id="q-header">
+    <div id="q-id-badge">Q001</div>
+    <div id="q-category-badge" class="cat-product">product</div>
+    <div id="nav-btns">
+      <button class="nav-btn" onclick="navigate(-1)">← Prev</button>
+      <button class="nav-btn" onclick="navigate(1)">Next →</button>
+    </div>
+  </div>
+  <div id="q-body">
+    <div id="q-text"></div>
+    <div id="choices-grid"></div>
+  </div>
+  <div id="comment-wrap">
+    <textarea id="comment-input" placeholder="Comment (optional)..." oninput="saveComment(this.value)"></textarea>
+  </div>
+  <div id="q-footer">
+    <div id="current-answer">Answer: <span id="answer-display">—</span></div>
+    <button class="clear-btn" onclick="clearAnswer()">Clear</button>
+    <button class="flag-btn" id="flag-btn" onclick="toggleFlag()">Flag</button>
+    <button id="export-btn" onclick="exportCSV()">Export CSV</button>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [{"id": 1, "q": "Watch S3 Ultra กันน้ำได้กี่ ATM ครับ", "choices": {"1": "3 ATM", "2": "IP68", "3": "5 ATM", "4": "IP67", "5": "10 ATM", "6": "20 ATM", "7": "IPX8", "8": "1 ATM", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 2, "q": "ปากกา SaiFah Pen Gen 2 ราคาเท่าไหร่คะ", "choices": {"1": "2,990 บาท", "2": "4,490 บาท", "3": "1,990 บาท", "4": "4,990 บาท", "5": "3,490 บาท", "6": "2,490 บาท", "7": "3,990 บาท", "8": "5,490 บาท", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 3, "q": "หูฟัง HeadPro X1 ใช้ Bluetooth เวอร์ชันอะไรคะ", "choices": {"1": "Bluetooth 5.0", "2": "Bluetooth 5.3", "3": "Bluetooth 5.4", "4": "Bluetooth 4.2", "5": "Bluetooth 5.2", "6": "Bluetooth 5.1", "7": "Bluetooth 4.0", "8": "Bluetooth 5.5", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 4, "q": "อยากเอามือถือเครื่องเก่ามาเทิร์น เปลี่ยนเป็นเครื่องใหม่ที่ฟ้าใหม่ได้ไหม?", "choices": {"1": "ได้ ลดราคาสูงสุด 30%", "2": "ได้ เฉพาะสมาร์ทโฟนสายฟ้าเท่านั้น", "3": "ได้ ต้องเป็นสมาชิก Gold ขึ้นไป", "4": "ได้ เฉพาะสินค้าที่ซื้อจากฟ้าใหม่", "5": "ได้ แต่ต้องซื้อเครื่องใหม่ราคาเกิน 10,000 บาท", "6": "ไม่มีบริการ Trade-in ในขณะนี้", "7": "ได้ เฉพาะช่วง Mega Sale", "8": "ได้ ต้องนำไปที่สาขาเท่านั้น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 5, "q": "สั่งของจากฟ้าใหม่ สั่งได้ครั้งละกี่ชิ้นครับ", "choices": {"1": "ไม่จำกัดจำนวน", "2": "5 รายการ", "3": "20 รายการ", "4": "15 รายการ", "5": "3 รายการ", "6": "10 รายการ", "7": "50 รายการ", "8": "8 รายการ", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 6, "q": "ฟ้าใหม่จ่ายด้วย crypto ได้มั้ยคะ เช่น Bitcoin", "choices": {"1": "รับเฉพาะ Bitcoin", "2": "รับเฉพาะ Ethereum", "3": "รับ crypto ทุกประเภท", "4": "ไม่รับ crypto แต่รับ FahMai Coin", "5": "รับ crypto เฉพาะสินค้าราคาเกิน 10,000 บาท", "6": "รับ crypto เฉพาะสมาชิก Platinum", "7": "รับ crypto เฉพาะช่วงโปรโมชัน", "8": "ไม่รับชำระด้วย Cryptocurrency ทุกประเภท", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 7, "q": "ซื้อ AirBook 14 มาแล้ว อยากรู้ว่าในกล่องมีอะไรมาบ้าง", "choices": {"1": "ตัวเครื่อง, หัวชาร์จ 65W, สาย USB-C 1.8m, คู่มือ, ผ้าเช็ดหน้าจอ", "2": "ตัวเครื่อง, หัวชาร์จ 65W, สาย USB-C 1.8m, คู่มือ, เมาส์ไร้สาย", "3": "ตัวเครื่อง, หัวชาร์จ 65W, สาย USB-C 1m, คู่มือ, ผ้าเช็ดหน้าจอ, กระเป๋า", "4": "ตัวเครื่อง, หัวชาร์จ 100W, สาย USB-C 1.8m, คู่มือ, ผ้าเช็ดหน้าจอ", "5": "ตัวเครื่อง, หัวชาร์จ 45W, สาย USB-C 1.8m, คู่มือ, หูฟัง", "6": "ตัวเครื่อง, หัวชาร์จ 65W, สาย USB-C 1.8m, คู่มือ, ผ้าเช็ดหน้าจอ, Hub USB-C", "7": "ตัวเครื่อง, หัวชาร์จ 65W, สาย HDMI, คู่มือ, ผ้าเช็ดหน้าจอ", "8": "ตัวเครื่อง, หัวชาร์จ 65W, สาย USB-C 1.8m, คู่มือ", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 8, "q": "DuoPad สั่งซื้อได้เลยไหมครับ หรือต้องพรีออเดอร์", "choices": {"1": "มีสินค้าพร้อมส่ง สั่งได้เลย", "2": "สินค้าหมด ต้องรอ restock", "3": "เป็นสินค้า Clearance ลดราคา", "4": "ยังเป็นสินค้าสั่งจองล่วงหน้า (Pre-order)", "5": "สินค้าถูกยกเลิกแล้ว", "6": "เป็นสินค้า Limited Edition ขายหมดแล้ว", "7": "สินค้ามีจำหน่ายเฉพาะหน้าร้าน", "8": "สินค้าอยู่ระหว่างการพัฒนา", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 9, "q": "เฮ้ยย อ่านเยอะมากเลย ขอถามนิดนึงนะคะ คือพอดีว่าจะไปเที่ยวภูเก็ตกับเพื่อนสนิท 3 คนช่วงวันหยุดยาวเดือนหน้า จองโรงแรม Kata Beach Resort ไว้แล้ว 3 คืน เพื่อนบอกว่าตรงนั้นมีจุดดำน้ำดูปะการังสวยมากชื่อ Freedom Beach ต้องนั่งเรือหางยาวไป ค่าเรือคนละ 800 บาท แล้วก็มีร้านอาหารทะเลอร่อยชื่อ No.6 Restaurant ที่ป่าตอง เพื่อนแนะนำให้ลองกุ้งมังกรเผา แล้วก็พอดีว่าเราชอบถ่ายรูปใต้น้ำด้วย เพื่อนอีกคนบอกว่าเคยเอามือถือกันน้ำไปถ่าย ได้ภาพสวยมาก เลยอยากรู้ว่าสายฟ้า Rugged R1 กันน้ำระดับไหนคะ เอาไปดำน้ำถ่ายรูปใต้ทะเลได้มั้ย แล้วถ้าน้ำเค็มเข้าเครื่องประกันคุ้มครองมั้ย", "choices": {"1": "Rugged R1 กันน้ำระดับ IP69K กันฝุ่นสมบูรณ์ ทนน้ำร้อน 80 องศา ดำน้ำได้ลึก 40 เมตร ทนแรงดันสูง พร้อม MIL-STD-810H 14 การทดสอบ ทนตก 1.8 เมตร กระจก Gorilla Glass Victus", "2": "Rugged R1 กันน้ำระดับ IP68 (1.5 เมตร 30 นาที) กันฝุ่นสมบูรณ์ พร้อม MIL-STD-810H 14 การทดสอบ ทนตก 1.8 เมตร กระจก Gorilla Glass Victus แต่น้ำเค็มเข้าเครื่องไม่คุ้มครอง", "3": "Rugged R1 กันน้ำระดับ IP69K ดำน้ำลึกได้ถึง 10 เมตร พร้อม Gorilla Glass Victus และน้ำเข้าเครื่องเคลมประกันได้ 1 ปี", "4": "Rugged R1 กันน้ำระดับ IP69K (สูงสุด กันน้ำแรงดันสูง) ทนน้ำร้อน 80 องศา พร้อม MIL-STD-810H แต่ IP69K ไม่ได้ออกแบบสำหรับดำน้ำลึก และความเสียหายจากน้ำไม่ครอบคลุมประกัน", "5": "Rugged R1 กันน้ำระดับ IP69K ทนน้ำร้อน 80 องศา กันฝุ่นสมบูรณ์ พร้อม MIL-STD-810H 14 การทดสอบ และประกันครอบคลุมน้ำเข้าเครื่อง 1 ปี", "6": "Rugged R1 กันน้ำระดับ IP54 กันน้ำกระเซ็นเท่านั้น พร้อม MIL-STD-810H ทนตก 1.8 เมตร Gorilla Glass Victus ไม่ควรเอาไปดำน้ำ", "7": "Rugged R1 กันน้ำระดับ IP67 (1 เมตร 30 นาที) พร้อม MIL-STD-810H 14 การทดสอบ ทนตก 1.8 เมตร และประกันครอบคลุมน้ำเข้าถ้ามี MIL-STD", "8": "Rugged R1 กันน้ำระดับ IP69K ทนน้ำร้อน 80 องศา พร้อม MIL-STD-810H 14 การทดสอบ แต่ต้องซื้อ Care+ เพิ่ม 30% ของราคาเครื่อง ถึงจะคุ้มครองน้ำเข้า", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 10, "q": "อยากใช้ซิม 2 ค่ายพร้อมกันครับ ใส่ซิมได้ 2 ใบมั้ย ไม่อยากพกมือถือ 2 เครื่อง มองอยู่รุ่น X9 Pro", "choices": {"1": "X9 Pro ใส่ได้ 2 ซิม แบบ nanoSIM + microSIM", "2": "X9 Pro ใส่ได้ 2 ซิมพร้อมกัน แบบ Dual nanoSIM (ใส่ซิมจริง 2 ใบ)", "3": "X9 Pro ใส่ซิมได้แค่ 1 ใบ ต้องเลือกรุ่น X9 Pro Max ถ้าต้องการ 2 ซิม", "4": "X9 Pro ใส่ได้ 2 eSIM พร้อมกัน ไม่มีช่องซิมจริง", "5": "X9 Pro ใส่ได้ 3 ซิม (eSIM + Dual nanoSIM)", "6": "X9 Pro ใส่ได้ 2 ซิม แต่ต้องเลือกว่าจะใช้ 5G ได้แค่ซิมเดียว", "7": "X9 Pro ใส่ได้ 2 ซิมพร้อมกัน แบบ eSIM + nanoSIM (Dual SIM)", "8": "X9 Pro ใส่ได้ 2 ซิม แต่ต้องใช้ 2 ซิมจากค่ายเดียวกัน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 11, "q": "โน้ตบุ๊คดาวเหนือ ครีเอเตอร์บุ๊ก 16 OLED ต่อจอเพิ่มได้กี่จอครับ อยากต่อ 2 จอ 4K ทำงานออกแบบ", "choices": {"1": "ต่อได้ 3 จอ 4K พร้อมกัน ผ่าน Thunderbolt 4 และ HDMI", "2": "ต่อได้แค่ 1 จอ 4K ผ่าน HDMI 2.1 เท่านั้น เพราะ ProBook 14 Max มี Thunderbolt 4 แค่ 1 พอร์ต", "3": "ต่อได้ 2 จอพร้อมกัน แต่ความละเอียดสูงสุดแค่ 1080p ต่อจอ ผ่าน Thunderbolt 4 และ HDMI 2.1", "4": "ต่อจอ 4K ได้ 2 จอพร้อมกัน หรือจอ 8K ได้ 1 จอ ผ่านพอร์ต Thunderbolt 4 สองพอร์ต", "5": "ต่อจอภายนอกไม่ได้เนื่องจากเป็น GPU Integrated ที่ใช้ชิปเซ็ต D2 Max ไม่มี discrete GPU สำหรับจอนอก", "6": "ต่อได้ 2 จอ 4K แต่ต้องซื้อ Dock Pro เพิ่ม ไม่สามารถต่อตรงได้", "7": "ต่อได้ 2 จอ 4K ผ่าน USB-A 3.2 Gen2 สองพอร์ต ที่รองรับ DisplayPort Alternate Mode", "8": "ต่อได้สูงสุด 1 จอ 8K หรือ 2 จอ 1440p เท่านั้น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 12, "q": "จะซื้อโน้ตบุ๊คเล่น Genshin Impact ลื่นๆ กราฟิกสูงๆ มีรุ่นไหนตอบโจทย์บ้าง แล้วได้กี่ FPS", "choices": {"1": "StormBook G7 ใช้ GPU StormForce GX-4070 8GB ได้ 80-120 FPS ที่ 1080p กราฟิก High-Ultra", "2": "StormBook G5 ใช้ GPU StormForce GX-4060 ได้ 60-90 FPS ที่ 1080p กราฟิก Medium-High", "3": "StormBook G9 Titan ใช้ GPU StormForce GX-4090 ได้ 144+ FPS ที่ 4K Ultra", "4": "CreatorBook 16 OLED ใช้ GPU Integrated ได้ 30-50 FPS ที่ 1080p กราฟิก Medium", "5": "AirBook 15 เหมาะสำหรับ Genshin Impact ที่กราฟิก Medium ได้ 60 FPS", "6": "StormBook G7 ใช้ GPU StormForce GX-3060 4GB ได้ 40-60 FPS ที่ 1080p", "7": "ProBook 16 เหมาะเล่น Genshin ได้ 120 FPS ที่ 4K Ultra", "8": "StudyBook 14 Plus เล่น Genshin ได้ที่กราฟิก Low-Medium ประมาณ 30 FPS", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 13, "q": "ทำงานในคาเฟ่เสียงดังมากเลย ต้องการหูฟังครอบหูที่ตัดเสียงรบกวนได้ดี แล้วก็ใช้สายโทรศัพท์ชัดๆ ด้วย มีรุ่นไหนแนะนำบ้างคะ", "choices": {"1": "เฮดออน 700 มี ANC แต่ไม่รองรับ Multipoint ต่อได้แค่ 1 เครื่อง", "2": "เฮดออน 300 มี ANC ราคา 2,490 บาท Bluetooth 5.1 แบต 50 ชม. และไมโครโฟนสำหรับโทรศัพท์ได้ชัดเจน", "3": "บัดส์ Z5 Pro มี ANC ไมโครโฟน 6 ตัว ใช้โทรศัพท์ได้ชัดเจน", "4": "เฮดโปร X1 มี ANC แต่ไม่มีไมโครโฟนในตัว ต้องซื้อไมโครโฟน Beamforming แยกในราคา 1,990 บาท", "5": "สตูดิโอโปร M1 มี ANC ระดับสตูดิโอ ไดรเวอร์ 50 มม. เหมาะสำหรับงาน Production แต่ไม่มี Multipoint", "6": "เฮดโปร X1 มี ANC ตัดเสียงรบกวนจากร้านกาแฟได้ดี มีไมโครโฟน Beamforming 4 ตัว สำหรับสายโทรศัพท์ที่ชัด", "7": "เฮดโปร X1 มี ANC แต่แบตเตอรี่อยู่ได้แค่ 10 ชม. เมื่อเปิด ANC", "8": "เกมสตอร์ม H1 มี ANC สำหรับเกมเมอร์ ใช้ในคาเฟ่ได้ดี พร้อมไมโครโฟน Boom Mic แบต 25 ชม.", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 14, "q": "ซื้อสายฟ้า X9 Pro มา อยากทราบว่าหัวชาร์จ 67W มาในกล่องด้วยเลยหรือต้องซื้อแยกคะ", "choices": {"1": "หัวชาร์จ 100W GaN Dual Port มาในกล่อง X9 Pro สามารถชาร์จเต็มได้ใน 35 นาที พร้อมสาย USB-C to USB-C 1 เมตร", "2": "หัวชาร์จ 67W มาในกล่อง X9 Pro ทุกรุ่นทุกสี พร้อมสาย USB-C to Lightning", "3": "หัวชาร์จ 67W ต้องซื้อแยกทุกรุ่น ราคา 1,290 บาท (JC-CH-001) ไม่รวมสาย ต้องซื้อสาย USB-C แยก", "4": "หัวชาร์จ 67W มาในกล่อง X9 Pro พร้อมสาย USB-C แต่ชาร์จเจอร์ที่ซื้อแยก (JC-CH-001) ไม่รวมสายในกล่อง", "5": "หัวชาร์จ 67W มาในกล่อง X9 Pro แต่ต้องลงทะเบียนออนไลน์ก่อนถึงจะใช้ได้", "6": "หัวชาร์จ 45W มาในกล่อง X9 Pro พร้อมสาย USB-C ความยาว 1.5 เมตร", "7": "หัวชาร์จไม่มีในกล่อง X9 Pro ต้องใช้ชาร์จเจอร์ 30W (JC-CH-003) ที่ซื้อแยก", "8": "หัวชาร์จ 67W มาในกล่อง X9 Pro ชาร์จเต็มใน 55 นาที พร้อมระบบ AI Charge Management", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 15, "q": "อยากฟังเพลง Lossless จาก streaming ได้คุณภาพดีๆ มีหูฟังครอบหูรุ่นไหนที่รองรับ LDAC บ้างคะ", "choices": {"1": "คลื่นเสียง บัดส์ Z5 Pro รองรับ LDAC codec (990 kbps) ผ่าน Bluetooth 5.3 มาตรฐาน Hi-Res Audio", "2": "คลื่นเสียง เฮดออน 500 รองรับ LDAC codec สำหรับ Lossless streaming ผ่าน Bluetooth 5.2", "3": "คลื่นเสียง เฮดออน 300 รองรับ AAC และ SBC codec ผ่าน Bluetooth 5.1 ราคา 2,490 บาท", "4": "คลื่นเสียง เฮดออน 700 รองรับ LDAC และ Hi-Res Audio พร้อม ANC ราคา 8,990 บาท", "5": "คลื่นเสียง เฮดโปร X1 รองรับ aptX HD ที่ให้คุณภาพเทียบเท่า Lossless แบตเตอรี่ 30 ชม.", "6": "ทุกรุ่นของคลื่นเสียงที่เป็นหูฟังครอบหูรองรับ LDAC ผ่าน Bluetooth 5.3", "7": "คลื่นเสียง เฮดโปร X1 รองรับ LDAC (990 kbps) Hi-Res Audio ผ่าน Bluetooth 5.3 เป็นหูฟังครอบหู", "8": "NovaTech NovaBuds Pro รองรับ LDAC Hi-Res Audio เป็นหูฟังครอบหูราคา 5,990 บาท", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 16, "q": "อยากได้นาฬิกาที่วัดคลื่นหัวใจ ECG ได้ มีรุ่นไหนบ้างคะ แล้ว Watch S3 ตัวธรรมดามี ECG มั้ย", "choices": {"1": "Watch S3 ตัวธรรมดาไม่มี ECG ต้องเลือก Watch S3 Pro (9,990 บาท) หรือ Watch S3 Ultra (14,990 บาท) ที่มี ECG", "2": "Watch S3 ทุกรุ่นรวมถึงตัวธรรมดา (5,990 บาท) มี ECG ทั้งหมด วัดคลื่นไฟฟ้าหัวใจได้จากข้อมือ", "3": "มีแค่ Watch S3 Ultra (14,990 บาท) รุ่นเดียวที่มี ECG พร้อม Dive Mode ส่วน S3 Pro ไม่มี ECG", "4": "Watch S3 Pro (9,990 บาท) มี ECG แต่ Watch S3 Ultra (14,990 บาท) ไม่มี ECG เพราะเน้น Dive Mode 40 เมตร", "5": "Watch S3 ตัวธรรมดามี ECG ในตัวอยู่แล้ว แต่ต้องอัปเดตซอฟต์แวร์เป็น WongKhoJon OS 3.1 ก่อน", "6": "Watch Sport G1 มี ECG Running Dynamics และ GPS Multi-Band (L1+L5) ราคา 11,990 บาท", "7": "Watch S3 SE มี ECG ในราคาประหยัด 3,990 บาท พร้อม HR, SpO2 และ Connected GPS ผ่านโทรศัพท์", "8": "Band 8 Pro มี ECG ราคา 2,490 บาท เหมาะสำหรับวัดสุขภาพหัวใจ", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 17, "q": "มองหาโน้ตบุ๊คเอาไว้ตัดต่อวิดีโอ 4K ครับ อยากได้จอสีแม่น แล้วก็พอร์ตอ่าน SD card ความเร็วสูงด้วย", "choices": {"1": "ดาวเหนือ ครีเอเตอร์บุ๊ก 16 OLED จอ OLED 4K Pantone Validated DCI-P3 100% มี SD Card UHS-II แต่ RAM แค่ 16GB อาจไม่พอตัดต่อ 4K ราคา 54,990 บาท", "2": "ดาวเหนือ โปรบุ๊ก 16 จอ mini-LED 3.5K DCI-P3 98% ความสว่างพีค 1,000 nit มี SD Card UHS-II พร้อม Thunderbolt 4 สองพอร์ต ราคา 59,990 บาท", "3": "ดาวเหนือ สตอร์มบุ๊ก G7 จอ IPS 16 นิ้ว 144Hz sRGB 100% พร้อม GPU StormForce GX-4070 RAM 16GB DDR5 SSD 1TB ราคา 44,990 บาท", "4": "ดาวเหนือ ครีเอเตอร์บุ๊ก 14 จอ OLED 2.8K DCI-P3 100% Delta E < 2 มี SD Card UHS-II พร้อม Thunderbolt 4 สองพอร์ต ราคา 39,990 บาท", "5": "ดาวเหนือ ครีเอเตอร์บุ๊ก 16 OLED จอ OLED 4K DCI-P3 100% Pantone Validated แต่ไม่มีพอร์ต SD Card ราคา 54,990 บาท", "6": "ดาวเหนือ แอร์บุ๊ก 15 จอ IPS 2K sRGB 100% มี SD Card Reader น้ำหนัก 1.3 กก. แบตเตอรี่ 18 ชม. พร้อม Thunderbolt 4 ราคา 35,990 บาท", "7": "NovaTech SlimBook 14 จอ IPS 2K sRGB 100% มี SD Card Reader น้ำหนัก 1.2 กก. พร้อม Thunderbolt 4 ราคา 27,990 บาท", "8": "ดาวเหนือ ครีเอเตอร์บุ๊ก 16 OLED จอ OLED 4K Pantone Validated DCI-P3 100% Delta E < 1 มี SD Card UHS-II RAM 32GB DDR5 ราคา 54,990 บาท", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 18, "q": "จะไปเที่ยวญี่ปุ่นช่วงสงกรานต์ หัวชาร์จ 67W ที่ซื้อไว้เอาไปใช้ที่ญี่ปุ่นได้มั้ยครับ ไฟฟ้าต่างกัน", "choices": {"1": "ไม่แนะนำ เพราะจะทำให้ประกัน 6 เดือนของชาร์จเจอร์เป็นโมฆะหากใช้กับไฟฟ้าต่างประเทศ", "2": "ใช้ไม่ได้ หัวชาร์จ GaN 67W รองรับเฉพาะไฟ 220V 50Hz ของไทย ต้องซื้อรุ่น International แยก", "3": "ใช้ได้ แต่ต้องซื้อ Voltage Converter แยก เพราะญี่ปุ่นใช้ไฟ 100V", "4": "ใช้ได้ รองรับ 110-220V แต่ความเร็วชาร์จจะลดลงเหลือ 30W เมื่อใช้ไฟต่ำกว่า 200V ในญี่ปุ่น", "5": "ใช้ได้ รองรับไฟฟ้า 100-240V AC 50/60Hz ใช้ได้ทั่วโลก แต่อาจต้องใช้ปลั๊กแปลงหัวตามแต่ละประเทศ", "6": "ใช้ได้ เพราะฟ้าใหม่มีบริการจัดส่งต่างประเทศ ส่งหัวชาร์จไปญี่ปุ่นได้", "7": "ใช้ไม่ได้ต้องซื้อหัวชาร์จรุ่น International Version แยกต่างหาก", "8": "ใช้ได้ รองรับ 100-240V แต่ต้องเป็นชาร์จเจอร์ 100W Dual เท่านั้น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 19, "q": "แม่อายุ 70 แล้วครับ อยากหามือถือที่ใช้ง่ายๆ ตัวหนังสือใหญ่ มีปุ่มขอความช่วยเหลือฉุกเฉินด้วย ใช้กับเครื่องช่วยฟังได้มั้ย", "choices": {"1": "ไม่มีข้อมูลว่ารองรับเครื่องช่วยฟังหรือไม่ แต่มีมือถือ Senior Plus ตัวอักษรใหญ่และมีปุ่ม SOS", "2": "มือถือ Senior Plus รองรับเครื่องช่วยฟัง (M4/T4) มีตัวอักษรใหญ่ เมนูเรียบง่าย ปุ่ม SOS ฉุกเฉินส่งตำแหน่ง GPS ให้ผู้ดูแลได้ 3 คน", "3": "มือถือ Kid Safe มี UI เรียบง่าย ปุ่ม SOS ฉุกเฉิน แต่ออกแบบสำหรับเด็กอายุ 6-12 ปี ไม่ใช่ผู้สูงอายุ ไม่รองรับเครื่องช่วยฟัง", "4": "มือถือ Lite 3 ราคาประหยัด ตัวอักษรใหญ่ มีปุ่ม SOS แต่ไม่มี Hearing Aid Compatible และไม่มี GPS ส่งตำแหน่งให้ผู้ดูแล", "5": "มือถือ Senior Plus มีตัวอักษรใหญ่ แต่ไม่มีปุ่ม SOS ต้องโทรเองผ่านแอป", "6": "มือถือ V7 Lite มี UI Mode สำหรับผู้สูงอายุ รองรับเครื่องช่วยฟัง แต่ไม่มีปุ่ม SOS ฉุกเฉินเหมือน Senior Plus", "7": "มือถือ Senior Plus มีทุกฟีเจอร์ที่ต้องการ (M4/T4, ปุ่ม SOS, ตัวอักษรใหญ่) แต่ราคา 5,990 บาท ไม่ใช่ 3,490 บาท", "8": "มือถือ Senior Plus รองรับเครื่องช่วยฟัง มีปุ่ม SOS แต่เป็น 5G ราคา 7,490 บาท", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 20, "q": "ซื้อนาฬิกาไว้วิ่งมาราธอน อยากได้ตัวที่แบตอึด GPS แม่นๆ แล้วก็วิเคราะห์ฟอร์มวิ่งได้ มีรุ่นไหนบ้างครับ", "choices": {"1": "Watch S3 Pro มี GPS Single-Band แบต 48 ชม. ECG วัดคลื่นหัวใจ NFC Pay และ HRV วัดความเครียด", "2": "Watch Sport G1 มี GPS Multi-Band (L1+L5) แบต 30 ชม. โหมด GPS และ Running Dynamics วิเคราะห์ก้าววิ่ง", "3": "Watch S3 Ultra มี GPS Dual-Band แบต 72 ชม. และ Dive Mode", "4": "Watch S3 มี GPS Single-Band แบต 18 ชม. และโหมดกีฬา 100+ ประเภท", "5": "Band 8 Pro มี GPS Single-Band แบต 9 วัน (15 ชม. GPS) กันน้ำ 5 ATM แต่ไม่มี Running Dynamics", "6": "Watch S3 SE มี Connected GPS ผ่านโทรศัพท์ แบต 36 ชม. กันน้ำ 3 ATM ไม่มี Running Dynamics", "7": "Watch Sport G1 มี GPS Single-Band แบต 7 วัน VO2 Max และ Training Readiness Score สำหรับวัดความฟิต", "8": "Watch S3 Pro มี GPS Dual-Band แบต 14 วัน และ Running Dynamics", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 21, "q": "ลูกชาย 8 ขวบอยากได้แท็บเล็ตเรียนออนไลน์ ครับ อยากได้ตัวที่ตกไม่แตกง่าย แล้วก็จำกัดเวลาเล่นเกมได้", "choices": {"1": "สายฟ้า แท็บ S9 ราคา 22,990 บาท จอ AMOLED 11 นิ้ว มีระบบ Parental Control แต่ไม่มีเคสกันกระแทกในกล่อง", "2": "สายฟ้า แท็บ A5 WiFi ราคา 11,990 บาท จอ 10.5 นิ้ว มีโหมดเด็กในตัว แต่ไม่มีเคส rubber bumper", "3": "สายฟ้า แท็บ Kid ราคา 6,990 บาท มีเคส rubber bumper กันกระแทก และระบบ FahMai Kids Mode จำกัดเวลาใช้งานได้", "4": "สายฟ้า แท็บ Mini 7 ราคา 17,990 บาท จอ 8.3 นิ้ว ขนาดกะทัดรัดเหมาะมือเด็ก แต่ไม่มี Kids Mode ในตัว", "5": "สายฟ้า แท็บ Draw Pro ราคา 19,990 บาท มีปากกาวาดรูปให้เด็กเรียนรู้", "6": "สายฟ้า แท็บ Kid ราคา 6,990 บาท มีเคส rubber bumper แต่ไม่มีระบบจำกัดเวลา", "7": "สายฟ้า แท็บ Kid ราคา 4,990 บาท มีเคสกันกระแทกซิลิโคนและ Kids Mode", "8": "สายฟ้า แท็บ S8 Pro ราคา 24,990 บาท จอ AMOLED 12.9 นิ้ว รุ่นเก่า มาพร้อม FahMai Kids Mode แต่ราคาสูง", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 22, "q": "จอมือถือสายฟ้า X9 Pro แตกครับ ซ่อมได้มั้ย ถ้าซื้อ Care+ ไว้ ต้องจ่ายเพิ่มเท่าไหร่", "choices": {"1": "จอแตกเคลมได้ผ่าน Care+ แต่ต้องส่งซ่อมภายใน 7 วัน หลังเกิดเหตุ", "2": "จอแตกครอบคลุมประกันปกติ 2 ปีจากสายฟ้า ซ่อมฟรีทุกกรณี ไม่ต้องซื้อ Care+ เพิ่มเติม", "3": "Care+ ครอบคลุมจอแตกได้เพียง 1 ครั้งต่อปี ลูกค้าจ่ายส่วนต่าง 30% ซื้อ Care+ ภายใน 30 วัน", "4": "จอแตกต้องซื้อจอใหม่ราคาเต็มเท่านั้น ไม่มีบริการซ่อมจอผ่านศูนย์บริการฟ้าใหม่ทั้ง 5 สาขา", "5": "Care+ ครอบคลุมจอแตก 2 ครั้งต่อปี ซ่อมฟรีไม่ต้องจ่ายส่วนต่าง", "6": "จอแตกไม่ครอบคลุมประกันปกติ แต่ถ้ามี Care+ ซ่อมได้สูงสุด 2 ครั้งต่อปี จ่ายส่วนต่าง 20% ของค่าซ่อม", "7": "Care+ ไม่ครอบคลุมจอแตก ครอบคลุมเฉพาะน้ำเข้า (1 ครั้ง/ปี ส่วนต่าง 30%) และแบตเสื่อมต่ำกว่า 80%", "8": "Care+ ครอบคลุมจอแตก 2 ครั้งต่อปี จ่ายส่วนต่าง 10% ของค่าซ่อม", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 23, "q": "Watch S3 กับ Watch S3 SE จอต่างกันยังไงคะ ใช้ AMOLED เหมือนกันไหม", "choices": {"1": "ทั้งสองรุ่นใช้จอ AMOLED เหมือนกัน ขนาด 1.7 นิ้ว ความสว่าง 1,000 nits ต่างกันแค่ราคา", "2": "Watch S3 ใช้จอ LCD TFT 360x360 พิกเซล ส่วน S3 SE ใช้ AMOLED 416x416 พิกเซล", "3": "Watch S3 ใช้จอ AMOLED ส่วน Watch S3 SE ใช้จอ LCD TFT ไม่เหมือนกัน", "4": "ทั้งสองรุ่นใช้จอ LCD TFT เหมือนกัน ขนาด 1.7 นิ้ว ความสว่าง 450 nits ต่างกันที่ GPS", "5": "Watch S3 ใช้จอ OLED ส่วน S3 SE ใช้จอ AMOLED", "6": "Watch S3 SE ใช้จอ Mini-LED ส่วน Watch S3 ใช้ AMOLED", "7": "ทั้งสองรุ่นใช้จอ IPS LCD ขนาด 1.7 นิ้ว ต่างกันแค่ความละเอียดและตัวเรือน", "8": "Watch S3 ใช้จอ Dynamic AMOLED ส่วน S3 SE ใช้ AMOLED ธรรมดา", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 24, "q": "เปรียบเทียบแบตแล็ปท็อปหน่อย ดาวเหนือ แอร์บุ๊ก 14 กับ NovaTech SlimBook 14 ตัวไหนแบตอยู่นานกว่ากัน", "choices": {"1": "SlimBook 14 แบตอยู่ได้นานกว่า ประมาณ 20 ชม. ส่วน AirBook 14 ได้ 15 ชม.", "2": "ทั้งสองรุ่นมีแบตเตอรี่ใกล้เคียงกันที่ 18 ชม. เพราะใช้ชิปเซ็ต NovaTech N7 เหมือนกัน", "3": "AirBook 14 แบตอยู่ได้ ~20 ชั่วโมง ส่วน SlimBook 14 ได้ ~15 ชั่วโมง แอร์บุ๊กนานกว่า", "4": "SlimBook 14 แบตอยู่ได้ 22 ชม. ส่วน AirBook 14 ได้ 18 ชม.", "5": "ทั้งสองรุ่นมีแบตเตอรี่ 70Wh เท่ากัน จึงใช้งานได้นานเท่ากัน", "6": "AirBook 14 แบตอยู่ได้ 12 ชม. (ชิป D1, 70Wh) ส่วน SlimBook 14 ได้ 15 ชม. (ชิป N7, 58Wh)", "7": "AirBook 14 แบตอยู่ได้ 20 ชม. ส่วน SlimBook 14 ได้ 20 ชม. เท่ากัน", "8": "SlimBook 14 แบตเตอรี่ 58Wh ได้ 18 ชม. ส่วน AirBook 14 แบตเตอรี่ 70Wh ได้ 15 ชม.", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 25, "q": "NovaBuds Pro กับ บัดส์ Z5 Pro ประกันตัวไหนนานกว่ากันครับ", "choices": {"1": "ทั้งสองรุ่นรับประกัน 1 ปีเท่ากัน โดย NovaBuds Pro ประกันจาก NovaTech ส่วน Z5 Pro จากคลื่นเสียง", "2": "บัดส์ Z5 Pro ประกัน 2 ปีจากคลื่นเสียง นานกว่า NovaBuds Pro ที่ประกัน 1 ปีจาก NovaTech", "3": "ทั้งสองรุ่นรับประกัน 2 ปีเท่ากัน NovaBuds Pro จาก NovaTech ส่วน Z5 Pro จากคลื่นเสียง", "4": "NovaBuds Pro ประกัน 6 เดือนจาก NovaTech ส่วน Z5 Pro ประกัน 1 ปีจากคลื่นเสียง Z5 Pro นานกว่า", "5": "NovaBuds Pro ประกัน 2 ปีจาก NovaTech ส่วน Z5 Pro ประกัน 1 ปีจากคลื่นเสียง NovaBuds Pro นานกว่า", "6": "บัดส์ Z5 Pro ประกัน 3 ปีจากคลื่นเสียง ส่วน NovaBuds Pro ประกัน 2 ปีจาก NovaTech Z5 Pro นานกว่า", "7": "ทั้งสองรุ่นประกัน 1 ปี แต่ลงทะเบียนออนไลน์ภายใน 30 วันขยายเป็น 2 ปีได้ทั้งคู่", "8": "NovaBuds Pro ประกัน 1 ปีจาก NovaTech ส่วน Z5 Pro ประกัน 18 เดือนจากคลื่นเสียง Z5 Pro นานกว่า", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 26, "q": "สนใจนาฬิกาวงโคจรครับ Watch S3 Pro กับ Watch S3 ตัวไหนมี ECG วัดคลื่นไฟฟ้าหัวใจได้?", "choices": {"1": "ทั้ง S3 Pro และ S3 มี ECG วัดคลื่นไฟฟ้าหัวใจได้ ต่างกันที่ S3 Pro มี NFC Pay เพิ่ม", "2": "ทั้ง S3 Pro และ S3 ไม่มี ECG ต้องเป็น S3 Ultra (14,990 บาท) ที่มีเซ็นเซอร์ ECG เท่านั้น ทั้งสองรุ่นมีแค่ HR, SpO2", "3": "Watch S3 มี ECG วัดคลื่นไฟฟ้าหัวใจได้ พร้อม NFC Pay แต่ S3 Pro ไม่มี ECG มีเพียง HR กับ SpO2 เท่านั้น", "4": "Watch S3 มี ECG เวอร์ชันพื้นฐาน วัดได้ 1 Lead ส่วน S3 Pro มี ECG ขั้นสูงวัดได้ 6 Lead", "5": "Watch S3 Pro มี ECG แต่ต้องอัปเดตซอฟต์แวร์เป็น FahMai Health v3.0 ก่อนถึงจะเปิดใช้ได้", "6": "Watch S3 Pro มี ECG วัดคลื่นไฟฟ้าหัวใจได้ พร้อม HR, SpO2, HRV ส่วน Watch S3 ไม่มี ECG และไม่มี NFC Pay", "7": "ทั้งสองรุ่นมี ECG แต่ S3 Pro มี HRV เพิ่มเติม ส่วน S3 มีเฉพาะ ECG กับ HR", "8": "Watch S3 Pro มี ECG แต่ใช้ได้เฉพาะกับสายฟ้าโฟน ไม่รองรับ Android ทั่วไป", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 27, "q": "อยากได้หูฟังครอบหูตัดเสียงรบกวนค่ะ เฮดออน 500 กับ เฮดออน 300 ตัวไหนมี ANC คะ", "choices": {"1": "ทั้งสองรุ่นมี ANC เหมือนกัน ต่างกันที่ HeadOn 500 มี Bluetooth 5.2 ส่วน HeadOn 300 มี Bluetooth 5.1", "2": "เฮดออน 500 มี ANC พร้อม Bluetooth 5.2 codec SBC/AAC แบต 40 ชม. ส่วนเฮดออน 300 ไม่มี ANC มีแค่ Passive Noise Isolation แบต 50 ชม.", "3": "เฮดออน 300 มี ANC พร้อมแบต 50 ชม. Bluetooth 5.1 ราคา 2,490 บาท ส่วนเฮดออน 500 ไม่มี ANC ราคา 4,990 บาท", "4": "ทั้งสองรุ่นไม่มี ANC ต้องเป็น HeadPro X1 (12,990 บาท) หรือ HeadOn 700 ขึ้นไปถึงจะมี ANC ตัดเสียงรบกวนได้", "5": "เฮดออน 300 มี ANC แบบไฮบริด พร้อม Bluetooth 5.1 แบต 50 ชม. ส่วน 500 มี ANC ธรรมดา Bluetooth 5.2 แบต 40 ชม.", "6": "เฮดออน 500 มี ANC แต่ต้องเปิดผ่านแอปคลื่นเสียง ส่วน 300 มี Passive Isolation ที่เปิดได้ที่ตัวหูฟังเลย", "7": "ทั้งสองรุ่นมี Passive Noise Isolation เหมือนกัน ไม่มีตัวไหนมี ANC ต้อง HeadOn 700 ขึ้นไปถึงจะมี ANC ตัดเสียงรบกวน", "8": "เฮดออน 500 มี ANC พร้อม Bluetooth 5.2 แบตเหลือ 20 ชม.เมื่อเปิด ANC ส่วน 300 ไม่มี ANC แบต 50 ชม.", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 28, "q": "soundbar คลื่นเสียง SoundBar 300 กับ ArcWave SoundPillar 300 ระบบเสียงต่างกันยังไงครับ ตัวไหนมี center channel", "choices": {"1": "ทั้งสองรุ่นเป็น 3.1 channel มี center channel เหมือนกัน กำลังขับ 80W RMS รองรับ Dolby Digital และ DTS", "2": "SoundPillar 300 เป็น 3.1 channel มี center channel ส่วน SoundBar 300 เป็น 3.0 channel", "3": "SoundBar 300 เป็น 5.1 channel ส่วน SoundPillar 300 เป็น 3.0 channel", "4": "ทั้งสองรุ่นเป็น 2.1 channel เหมือนกัน ไม่มี center channel มีแค่ซ้าย+ขวา+subwoofer ในตัว", "5": "SoundBar 300 เป็น 3.0 channel ไม่มี center channel ส่วน SoundPillar 300 เป็น 2.0 channel ไม่มี subwoofer", "6": "ทั้งสองรุ่นเป็น 3.0 channel ไม่มี center channel กำลังขับ 60W RMS รองรับ Dolby Digital และ DTS", "7": "SoundBar 300 เป็น 3.1 channel มี center channel ส่วน SoundPillar 300 เป็น 3.0 channel ไม่มี center channel", "8": "SoundPillar 300 เป็น 5.0 channel ส่วน SoundBar 300 เป็น 3.1 channel", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 29, "q": "แบนด์ 8 กับ 8 Pro ต่างกันยังไงเรื่อง GPS อ่ะคะ ตัวไหนมี GPS ในตัว?", "choices": {"1": "ทั้งสองรุ่นมี GPS ในตัว แต่ Band 8 Pro มี Multi-Band GPS (L1+L5) ส่วน Band 8 มี Single-Band GPS เท่านั้น", "2": "ทั้งสองรุ่นไม่มี GPS ในตัว ต้องพกโทรศัพท์ไปด้วยและใช้ Connected GPS ผ่านแอป WongKhoJon Health", "3": "Band 8 มี GPS Single-Band ในตัว ออกวิ่งได้ไม่ต้องพกโทรศัพท์ ส่วน Band 8 Pro ใช้ Connected GPS", "4": "Band 8 Pro มี GPS ในตัว (Single-Band GPS, GLONASS) ส่วน Band 8 ไม่มี GPS ต้องใช้ Connected GPS ผ่านโทรศัพท์", "5": "ทั้งสองรุ่นมี GPS Single-Band ในตัวเหมือนกัน ต่างกันแค่ราคา (Band 8 1,490 บาท / Band 8 Pro 2,490 บาท)", "6": "Band 8 มี GPS แบบ Dual-Band ส่วน Band 8 Pro มี Single-Band", "7": "Band 8 Pro ใช้ GPS แบบ Dual-Band + Galileo ส่วน Band 8 ใช้ Single-Band", "8": "Band 8 Pro มี GPS Single-Band ในตัว แต่ต้องเปิดโหมด Outdoor GPS ก่อนถึงจะใช้ได้ ไม่เปิดอัตโนมัติ", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 30, "q": "Hub 7-in-1 กับ Hub 4-in-1 ของจุดเชื่อม ชาร์จผ่าน USB-C ได้ทั้งสองตัวไหมครับ", "choices": {"1": "ได้ทั้งคู่ รองรับ PD passthrough 100W เท่ากัน", "2": "เฉพาะ Hub 7-in-1 ที่ชาร์จผ่าน USB-C ได้ Hub 4-in-1 ไม่มีพอร์ต PD", "3": "ได้ทั้งคู่ แต่กำลังต่างกัน 7-in-1 รองรับ 100W ส่วน 4-in-1 รองรับ 60W", "4": "ได้ทั้งคู่ รองรับ PD passthrough 60W เท่ากัน", "5": "เฉพาะ Hub 4-in-1 ที่มี PD passthrough ส่วน 7-in-1 ใช้ไฟจาก host อย่างเดียว", "6": "ไม่ได้ทั้งคู่ Hub ของจุดเชื่อมเป็นแบบ bus-powered เท่านั้น", "7": "ได้ทั้งคู่ แต่กำลังต่างกัน 7-in-1 รองรับ 65W ส่วน 4-in-1 รองรับ 45W", "8": "ได้ทั้งคู่ รองรับ PD passthrough 100W แต่ต้องใช้สาย USB-C ของจุดเชื่อมเท่านั้น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 31, "q": "ซื้อวงโคจร Watch S3 Ultra ช่วง Mega Sale มาได้ 12 วันแล้วค่ะ ยังคืนได้อยู่ไหม", "choices": {"1": "คืนได้ค่ะ ยังอยู่ในระยะเวลา 15 วันตามปกติ Watch S3 Ultra ราคา 14,990 บาทคืนได้ทั้งทางไปรษณีย์และสาขา", "2": "คืนได้ค่ะ สินค้าราคาเกิน 10,000 บาท มีเวลาคืน 30 วัน", "3": "คืนได้ แต่ต้องนำไปคืนที่สาขาเท่านั้นเพราะเป็นสมาร์ทวอทช์ ฟ้าใหม่ไม่รับคืนอุปกรณ์สวมใส่ทางไปรษณีย์", "4": "ไม่ได้แล้วค่ะ สินค้าที่ซื้อช่วง Mega Sale มีระยะเวลาคืนสินค้าเพียง 7 วัน ไม่ใช่ 15 วัน", "5": "คืนได้ค่ะ ช่วง Mega Sale ขยายระยะเวลาคืนสินค้าเป็น 30 วัน เพราะเป็นโปรโมชันพิเศษของฟ้าใหม่", "6": "คืนได้ครับ สมาร์ทวอทช์ไม่อยู่ในรายการสินค้าที่ไม่รับคืน", "7": "คืนไม่ได้เพราะสมาร์ทวอทช์ถือเป็นอุปกรณ์สวมใส่ไม่รับคืนทุกกรณี", "8": "คืนได้ถ้าเป็นสมาชิก Gold ขึ้นไป ระดับ Silver คืนได้แค่ 7 วัน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 32, "q": "ช่วยดูให้หน่อยได้ไหมครับ เรื่องมันยาวนิดนึง คือผมอยากได้แล็ปท็อปสักเครื่องสำหรับเรียนมหาลัย ตอนแรกดูแอร์บุ๊ก 14 ของดาวเหนือ 29,990 บาท สเปคดีมาก RAM 16GB แบตอยู่ได้ 20 ชม. น้ำหนัก 1.1 กก. เบามาก แต่แฟนบอกว่าแพงไป ให้ดูสตั๊ดดี้บุ๊ก 14 ดีกว่า ราคา 15,990 บาท แถมมีโปรนักศึกษาลด 5% เหลือ 15,190 บาท แฟนบอกว่า RAM อัปเกรดได้ด้วย ก็เลยสั่งสตั๊ดดี้บุ๊ก 14 ไปเมื่อวาน จ่ายเงินเรียบร้อย แต่พอกลับมาดูรีวิวในยูทูปอีกที เห็นว่าแอร์บุ๊กจอ 2K สวยกว่ามาก แบตอยู่ 20 ชม. เทียบกับสตั๊ดดี้บุ๊กที่อยู่ 10 ชม. แล้วก็ตัวเครื่องอะลูมิเนียม CNC ดูพรีเมียมกว่าเยอะ เริ่มเสียใจที่ไม่ซื้อแอร์บุ๊ก ตอนนี้เช็คในแอปสถานะขึ้นว่า กำลังเตรียมจัดส่ง ยังยกเลิกได้ไหมครับ", "choices": {"1": "ไม่สามารถยกเลิกได้เพราะชำระเงินแล้ว สินค้าที่ชำระเงินเรียบร้อยแล้วไม่สามารถยกเลิกได้ทุกกรณี", "2": "ยกเลิกได้ผ่านแอปหรือเว็บไซต์ เนื่องจากสถานะยังอยู่ในขั้น 'กำลังเตรียมจัดส่ง' ซึ่งยังไม่ได้ส่งมอบให้บริษัทขนส่ง", "3": "ยกเลิกได้แต่ต้องเสียค่าดำเนินการ 5% คือประมาณ 760 บาท จากราคาสตั๊ดดี้บุ๊ก 14 ที่ 15,190 บาท", "4": "ไม่สามารถยกเลิกได้เพราะเป็นสินค้าโปรนักศึกษาที่ใช้ส่วนลดแล้ว คำสั่งซื้อที่ใช้โค้ดส่วนลดไม่สามารถยกเลิกได้", "5": "ยกเลิกได้แต่ต้องโทร 02-888-9999 เท่านั้น สินค้าราคาต่ำกว่า 20,000 บาทไม่รับยกเลิกผ่านแอป", "6": "ต้องรอรับสินค้าก่อนแล้วค่อยทำเรื่องคืนภายใน 15 วัน กดยกเลิกในขั้นเตรียมจัดส่งไม่ได้แล้ว", "7": "ยกเลิกได้แต่จะได้รับเงินคืนเป็น FahMai Wallet เท่านั้น ไม่คืนเงินผ่านบัตรเครดิตหรือโอนธนาคาร", "8": "ไม่สามารถยกเลิกได้เพราะสินค้าราคาต่ำกว่า 20,000 บาท ต้องรอรับสินค้าก่อนแล้วค่อยทำเรื่องคืน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 33, "q": "ครีเอเตอร์บุ๊ก 16 OLED เครื่องผมมีปัญหา อยากเคลมประกัน ให้มารับที่บ้านได้ป่าวครับ", "choices": {"1": "ไม่ได้ครับ ต้องนำเครื่องไปที่สาขาฟ้าใหม่เท่านั้น ไม่มีบริการรับเครื่องที่บ้านสำหรับสินค้าแล็ปท็อปทุกรุ่น", "2": "ได้ครับ แต่ต้องจ่ายค่าบริการรับเครื่อง 200 บาทสำหรับพื้นที่กรุงเทพฯ และ 300 บาทสำหรับต่างจังหวัด", "3": "ไม่มีบริการรับเครื่องที่บ้าน ต้องส่งทางไปรษณีย์เข้าศูนย์ โดยลูกค้ารับผิดชอบค่าจัดส่ง 50-150 บาทเอง", "4": "บริการรับที่บ้านมีเฉพาะสมาชิก Platinum เท่านั้น สมาชิก Silver และ Gold ต้องนำเครื่องไปที่สาขาฟ้าใหม่", "5": "ได้ แต่เฉพาะในเขตกรุงเทพฯ และปริมณฑลเท่านั้น ต่างจังหวัดต้องส่งเครื่องทางไปรษณีย์เข้าศูนย์บริการ", "6": "ไม่ได้ครับ CreatorBook เป็นแล็ปท็อป ไม่มีบริการ On-site ตั้งแต่ปีที่สอง", "7": "ต้องเข้าสาขาเท่านั้น เพราะ CreatorBook 16 OLED ราคาเกิน 50,000 บาท สินค้าราคาสูงไม่มีบริการ Home Pickup", "8": "ได้ครับ CreatorBook 16 OLED เป็นแล็ปท็อปดาวเหนือ มีบริการ On-site Service ในปีแรก ช่างเทคนิคจะเดินทางมาซ่อมถึงบ้านหรือที่ทำงาน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 34, "q": "เคลมประกัน ArcWave SoundPillar 300 ต้องทำยังไงบ้างครับ ส่งซ่อมเองได้เลยมั้ย", "choices": {"1": "ส่งซ่อมที่ศูนย์ ArcWave โดยตรง ไม่ต้องผ่านฟ้าใหม่ ใช้เวลา 3-7 วันทำการ", "2": "แจ้งเคลมผ่านฟ้าใหม่ ฟ้าใหม่จะส่งช่างมาซ่อมถึงบ้าน (On-site Service) ภายใน 2 วันทำการ", "3": "ส่งเครื่องกลับ ArcWave ทางไปรษณีย์เอง แล้ว ArcWave ส่งคืนภายใน 7 วัน", "4": "นำเครื่องไปที่สาขาฟ้าใหม่ ช่างของฟ้าใหม่จะซ่อมให้ภายในวัน เนื่องจาก SoundPillar เป็นลำโพงขนาดเล็ก", "5": "แจ้งเคลมผ่านฟ้าใหม่เพื่อประสานงานกับ ArcWave โดยฟ้าใหม่เป็นตัวกลาง ใช้เวลาประมาณ 14 วันทำการ", "6": "ต้องโทรหา ArcWave เท่านั้น เพราะสินค้าแบรนด์พาร์ทเนอร์ฟ้าใหม่ไม่รับเคลม", "7": "เคลมผ่านแอปฟ้าใหม่ได้เลย รอ 3-5 วันทำการ เหมือนสินค้าแบรนด์ฟ้าใหม่ทั่วไป", "8": "ส่งเครื่องเข้าศูนย์บริการฟ้าใหม่ได้โดยตรง ซ่อมภายใน 7 วันทำการ เหมือนสินค้าแบรนด์ House Brand ทั่วไป", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 35, "q": "ซื้อเฟล็กซ์บุ๊ก Detach แบบ Bundle มา อยากคืนเฉพาะคีย์บอร์ดอย่างเดียวได้มั้ยคะ ไม่อยากใช้คีย์บอร์ด", "choices": {"1": "คืนเฉพาะคีย์บอร์ดได้ค่ะ จะได้เงินคืนตามสัดส่วนราคาคีย์บอร์ด", "2": "คืนได้เฉพาะคีย์บอร์ดภายใน 7 วันแรก หลังจากนั้นต้องคืนทั้งชุด", "3": "ไม่ได้ค่ะ เนื่องจากเป็นสินค้า Bundle ต้องคืนทั้งชุดพร้อมกัน ไม่รับคืนแยกชิ้น", "4": "คืนเฉพาะคีย์บอร์ดได้ แต่ต้องเสียค่าธรรมเนียมการแยกชุด 500 บาท", "5": "คืนเฉพาะส่วนไหนก็ได้ภายใน 15 วัน เพราะเป็นสินค้าราคาไม่เกิน 50,000 บาท", "6": "ต้องนำไปคืนที่สาขาฟ้าใหม่เท่านั้นเพราะราคาเกิน 36,000 บาท", "7": "คืนคีย์บอร์ดอย่างเดียวได้ถ้ายังไม่แกะซีล", "8": "ต้องติดต่อฝ่ายบริการลูกค้าเพื่อขอเปลี่ยนเป็นรุ่นไม่มีคีย์บอร์ดแทน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 36, "q": "สั่งสายฟ้าโฟน X9 Pro ไปแล้ว ตอนนี้สถานะขึ้นว่าจัดส่งแล้ว อยากยกเลิกคำสั่งซื้อทำได้ป่าวครับ", "choices": {"1": "ยกเลิกได้ครับ กดยกเลิกในแอปฟ้าใหม่ได้เลยไม่ว่าสถานะจะเป็นอะไร คืนเงินภายใน 24 ชั่วโมงผ่าน FahMai Wallet", "2": "ยกเลิกไม่ได้ เมื่อสถานะเป็น \"จัดส่งแล้ว\" ต้องรับสินค้าก่อนแล้วค่อยยื่นคำขอคืนสินค้าแทน", "3": "ยกเลิกได้ แต่ต้องโทร 02-888-9999 ภายใน 1 ชั่วโมงหลังจัดส่ง", "4": "ยกเลิกได้ถ้าสินค้ายังไม่ถึงมือ ระบบจะส่งคืนโดยอัตโนมัติ โดยไม่จำเป็นต้องรับสินค้าก่อน", "5": "ยกเลิกได้ครับ แต่ต้องเสียค่าธรรมเนียม 5% ของมูลค่าสินค้า คือประมาณ 1,250 บาทสำหรับ X9 Pro ราคา 24,990 บาท", "6": "ยกเลิกไม่ได้ และไม่สามารถคืนสินค้าได้เช่นกัน เพราะเป็นสมาร์ทโฟน", "7": "ยกเลิกได้ถ้าเป็นสมาชิก Platinum แต่ระดับอื่นต้องรอรับสินค้าก่อน", "8": "ให้ปฏิเสธการรับสินค้าตอนพนักงานขนส่งมาส่ง แล้วจะได้เงินคืนอัตโนมัติ", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 37, "q": "สวัสดีค่ะ คืออยากปรึกษาเรื่องหูฟังที่ซื้อมาค่ะ เมื่อวันเสาร์ที่ผ่านมาไปร้านฟ้าใหม่สาขาลาดพร้าวกับแฟน เดิมจะไปดูเคสโทรศัพท์อย่างเดียว แต่พอเดินผ่านโซนหูฟังก็สนใจหูฟังไร้สายขึ้นมา พนักงานแนะนำ คลื่นเสียง บัดส์ Z5 บอกว่า ANC ดีมาก ชาร์จได้นาน คืนนั้นก็เลยตัดสินใจซื้อเลยค่ะ ราคา 5,490 บาท วันอาทิตย์เอาไปใช้ที่ฟิตเนสตอนวิ่งบนลู่ เสียงดีนะคะ ANC ตัดเสียงรอบข้างได้เลย แต่ปัญหาคือมันหลุดจากหูตลอดเลยค่ะตอนวิ่ง ลอง Ear Tips ทุกไซส์แล้ว S M L ก็ยังหลุดอยู่ดี อาจจะเป็นเพราะรูหูเราไม่เหมาะกับทรง In-Ear มั้ง เพื่อนที่ทำงานบอกว่าลองดู Open Ring ดีกว่า มันเป็นแบบคล้องหูไม่ต้องยัดเข้าหู แต่ก่อนจะไปซื้อตัวใหม่ ก็เลยอยากถามก่อนว่า ตัว บัดส์ Z5 ที่ซื้อมาวันเสาร์ แกะใช้แล้ว ส่งคืนได้ไหมคะ", "choices": {"1": "คืนได้ตามปกติภายใน 15 วัน เพราะสินค้าไม่เหมาะกับการใช้งาน แม้แกะใช้แล้วสินค้าทุกประเภทคืนได้หมด", "2": "คืนได้ถ้าส่งคืนภายใน 7 วันนับจากวันที่ซื้อ สินค้าหูฟัง In-Ear ราคาต่ำกว่า 10,000 บาทมีเวลาคืน 7 วัน", "3": "คืนได้เฉพาะถ้ายังไม่ได้ลอง Ear Tips ทุกไซส์ หากเปิดซีลแต่ยังไม่สวมใส่ยังคืนได้ตามนโยบายปกติ", "4": "คืนได้ แต่ต้องนำไปคืนที่สาขาลาดพร้าวที่ซื้อเท่านั้น ฟ้าใหม่กำหนดให้คืนสินค้าที่สาขาเดิมที่ซื้อเท่านั้น", "5": "คืนได้แต่จะถูกหักค่าดำเนินการ 5% คือประมาณ 275 บาทสำหรับ บัดส์ Z5 ราคา 5,490 บาท", "6": "ไม่สามารถคืนได้เพราะเป็นสินค้าโปรโมชัน Mid-Year Sale ที่ลดจาก 5,490 เหลือ 4,990 บาท สินค้าลดราคาไม่รับคืน", "7": "คืนได้แต่ต้องแลกเป็นรุ่น Open Ring ราคา 6,990 บาทแทนเท่านั้น ต้องจ่ายส่วนต่าง 1,500 บาท ไม่รับคืนเป็นเงิน", "8": "ไม่สามารถคืนได้ เนื่องจากบัดส์ Z5 เป็นหูฟังแบบ In-Ear ที่เปิดใช้งานแล้ว ตามนโยบายด้านสุขอนามัยของฟ้าใหม่", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 38, "q": "เป็นสมาชิก Platinum อยู่ครับ สั่งสายฟ้า โฟน V7 ส่งแบบด่วนต้องจ่ายเพิ่มเท่าไหร่ ที่อยู่ในกรุงเทพฯ ครับ", "choices": {"1": "สมาชิก Platinum จ่ายค่า Express ครึ่งราคา คือ 50 บาท สำหรับพื้นที่กรุงเทพฯ และปริมณฑล ได้รับภายใน 1 วันทำการ", "2": "Express ราคา 100 บาท สมาชิกทุกระดับจ่ายเท่ากัน ไม่มีสิทธิพิเศษลดค่าจัดส่ง Express ให้สมาชิกระดับไหน", "3": "Platinum ไม่ต้องจ่ายค่าจัดส่งปกติ แต่ Express ต้องจ่ายเพิ่ม 100 บาท", "4": "ฟรีค่าจัดส่งทุกรูปแบบ แต่ Express ให้บริการเฉพาะต่างจังหวัดเท่านั้น กรุงเทพฯ ส่งมาตรฐาน 1-2 วันทำการ", "5": "Platinum ได้ Express ฟรี แต่ต้องสั่งขั้นต่ำ 1,000 บาทขึ้นไป", "6": "สมาชิก Platinum ได้ Express ฟรี ไม่ต้องจ่ายเพิ่ม สำหรับพื้นที่กรุงเทพฯ และปริมณฑล", "7": "ค่า Express 100 บาท แต่สามารถใช้ FahMai Points แลกค่าส่งได้", "8": "Platinum ได้ Express ฟรีทั่วประเทศ ไม่จำกัดเฉพาะกรุงเทพฯ", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 39, "q": "สั่ง Pre-order สายฟ้า โฟน DuoPad ไว้ กำหนดส่งวันที่ 15 เมษายน ตอนนี้วันที่ 14 เมษายนแล้วครับ เปลี่ยนใจอยากยกเลิก ต้องเสียค่าอะไรมั้ย", "choices": {"1": "ยกเลิกได้ฟรีไม่เสียค่าใช้จ่าย เพราะยังไม่ถึงวันจัดส่ง 15 เมษายน สินค้า Pre-order ยกเลิกฟรีได้ทุกกรณี", "2": "ไม่สามารถยกเลิกได้เพราะเป็นสินค้า Pre-order ราคา 54,990 บาท ทุกคำสั่ง Pre-order ห้ามยกเลิกหลังชำระเงินแล้ว", "3": "ยกเลิกได้แต่ต้องเสียค่าดำเนินการ 10% ของราคาสินค้า", "4": "ยกเลิกได้แต่จะถูกหักค่าดำเนินการ 5% ของราคาสินค้า เนื่องจากเหลือเวลาน้อยกว่า 3 วันก่อนวันจัดส่ง", "5": "ยกเลิกได้แต่ต้องโทรแจ้ง 02-888-9999 เท่านั้น ไม่สามารถยกเลิกผ่านแอปหรือเว็บไซต์ฟ้าใหม่ได้", "6": "ไม่สามารถยกเลิกได้เพราะสินค้ามีราคาเกิน 50,000 บาท", "7": "ยกเลิกได้แต่จะได้รับเงินคืนเป็น FahMai Wallet เท่านั้น", "8": "ต้องรอรับสินค้าก่อนแล้วค่อยทำเรื่องคืนภายใน 15 วัน โดยต้องคืนผ่านสาขาฟ้าใหม่เพราะเกิน 50,000 บาท", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 40, "q": "Watch S3 SE หน้าจอเป็น AMOLED ไหมครับ", "choices": {"1": "เป็น AMOLED 1.7 นิ้ว ความละเอียด 396x484 พิกเซล Always-On Display", "2": "เป็น Super AMOLED 1.7 นิ้ว ความสว่างสูงสุด 1,000 nits สีสดใส", "3": "เป็น OLED 1.7 นิ้ว รองรับ Always-On Display สีดำสนิทประหยัดแบตเตอรี่", "4": "เป็น AMOLED 1.4 นิ้ว ความสว่างสูงสุด 600 nits เหมือนรุ่น Watch S3", "5": "ไม่ใช่ AMOLED เป็นจอ IPS LCD 1.7 นิ้ว ให้สีที่สดใสกว่า TFT ทั่วไป", "6": "เป็น AMOLED แต่ความสว่างต่ำกว่ารุ่น S3 อยู่ที่ 450 nits เพราะเป็นรุ่น SE ราคาประหยัด", "7": "ไม่ใช่ AMOLED เป็นจอ E Ink 1.7 นิ้ว ประหยัดแบตเตอรี่สูงสุด", "8": "ไม่ใช่ AMOLED เป็นจอ LCD TFT 1.7 นิ้ว", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 41, "q": "เฟล็กซ์บุ๊ก Detach มีคีย์บอร์ดมาในกล่องไหมครับ", "choices": {"1": "มีคีย์บอร์ดแถมในกล่อง เชื่อมต่อแบบ Magnetic Pogo Pin Dock พร้อมแบตเตอรี่ 20Wh ในตัว", "2": "มีคีย์บอร์ด Bluetooth มาให้ พร้อมทัชแพดในตัว ใช้ได้กับ FlexBook Detach โดยเฉพาะ แบตเตอรี่ในตัวใช้งานได้ 20 ชั่วโมง", "3": "มีคีย์บอร์ดแบบ Magnetic Dock มาให้ รวมอยู่ในราคา 32,990 บาท พร้อม Backlit LED", "4": "มีคีย์บอร์ดขนาดเล็กมาให้ แต่ไม่ใช่ Full-size เป็น Compact 60% ต้องซื้อคีย์บอร์ด Full-size แยกถ้าต้องการพิมพ์งานจริงจัง", "5": "มีคีย์บอร์ดแถม แต่ต้องลงทะเบียนรับสิทธิ์ก่อนผ่านเว็บฟ้าใหม่ภายใน 30 วันหลังซื้อ ไม่งั้นต้องซื้อแยกราคา 5,990 บาท", "6": "มีคีย์บอร์ดมาในกล่องพร้อม Stylus Pen 4,096 ระดับแรงกดและกระเป๋าผ้าสำหรับพกพา", "7": "ไม่รวมคีย์บอร์ด ขายแยกต่างหาก หรือเลือกซื้อ FlexBook Detach + Keyboard Bundle (฿36,990)", "8": "มีคีย์บอร์ดมาในกล่อง แบบ USB-C plug-in ขนาดกะทัดรัด พร้อมทัชแพดในตัว", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 42, "q": "เฮดออน 300 มีระบบตัดเสียง ANC ไหม", "choices": {"1": "มี ANC แบบ Adaptive ปรับระดับตัดเสียงอัตโนมัติตามสภาพแวดล้อม ผ่านไมโครโฟน 4 ตัว", "2": "ไม่มี ANC มีเฉพาะ Passive Noise Isolation เท่านั้น", "3": "มี ANC + Transparency Mode", "4": "มี ANC แต่ต้องเปิดในแอปคลื่นเสียงก่อน ไม่สามารถเปิด ANC จากปุ่มบนตัวหูฟังได้", "5": "มี ANC เฉพาะเมื่อเชื่อมต่อด้วยสาย 3.5 มม.", "6": "มี ANC ระดับพื้นฐาน ตัดเสียงได้ 20 dB ใช้ไมโครโฟน 2 ตัว เหมาะกับสภาพแวดล้อมเงียบ", "7": "มี ANC แบบ Hybrid 6 ไมโครโฟน", "8": "มี ANC แต่เฉพาะรุ่น FahMai Edition เท่านั้น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 43, "q": "หูฟัง StudioPro M1 เชื่อมต่อ Bluetooth ได้ไหมคะ", "choices": {"1": "รองรับ Bluetooth 5.3 เชื่อมต่อได้ทั้งโทรศัพท์ แท็บเล็ต และคอมพิวเตอร์", "2": "รองรับ Bluetooth 5.0 พร้อม Codec SBC และ AAC สำหรับเสียงไร้สายคุณภาพดี", "3": "รองรับ Bluetooth 5.1 พร้อม LDAC สำหรับเสียง Hi-Res ไร้สายคุณภาพสตูดิโอ", "4": "ไม่มี Bluetooth เป็นหูฟังมีสายเท่านั้น เชื่อมต่อด้วยสาย 3.5 มม. + อะแดปเตอร์ 6.35 มม.", "5": "รองรับ Bluetooth แต่ต้องซื้ออะแดปเตอร์ Bluetooth แยก ราคา 990 บาท เสียบผ่าน 3.5 มม.", "6": "รองรับ Bluetooth 5.2 โหมด Low Latency เหมาะสำหรับงานตัดต่อเสียงและเล่นเกม", "7": "รองรับ Bluetooth 4.2 เท่านั้น ไม่รองรับ Codec LDAC หรือ aptX เชื่อมต่อได้ 1 อุปกรณ์", "8": "รองรับ Bluetooth เฉพาะเมื่อชาร์จเต็ม ถ้าแบตต่ำจะตัดการเชื่อมต่อ Bluetooth อัตโนมัติ", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 44, "q": "วงโคจร Band 8 มี GPS ในตัวไหมคะ", "choices": {"1": "ไม่มี GPS ในตัว ต้องใช้ Connected GPS ผ่านโทรศัพท์ หากต้องการ GPS ในตัวแนะนำ Band 8 Pro", "2": "มี GPS ในตัวแบบ Multi-band ไม่ต้องพกโทรศัพท์ตอนวิ่งออกกำลังกายกลางแจ้ง", "3": "มี GPS ในตัวแบบ Dual-frequency ความแม่นยำสูงรองรับ GLONASS และ BeiDou", "4": "มี GPS ในตัว แต่ความแม่นยำต่ำ ต้องพกโทรศัพท์ช่วยเพื่อปรับตำแหน่งให้แม่นยำขึ้น", "5": "มี GPS ในตัว + GLONASS รองรับ 100 โหมดกีฬา บันทึกเส้นทางได้แม่นยำ", "6": "มี GPS แต่ต้องเปิดใช้งานผ่านแอป WongKhoJon Health บนโทรศัพท์ก่อนทุกครั้ง", "7": "มี GPS ในตัว เฉพาะโหมดกีฬากลางแจ้ง โหมดอื่นต้องใช้ Connected GPS ผ่านโทรศัพท์", "8": "มี A-GPS เท่านั้น ต้องเชื่อมต่อกับโทรศัพท์เพื่อดาวน์โหลดข้อมูลดาวเทียมก่อนใช้งาน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 45, "q": "หูฟัง Z5 มีรุ่นไหนบ้างคะ?", "choices": {"1": "มีรุ่นเดียวคือ บัดส์ Z5 ราคา ฿5,490 ไดรเวอร์ 12 มม. รองรับ ANC และ LDAC", "2": "มี 2 รุ่น: บัดส์ Z5 (฿5,490) ไดรเวอร์ 12 มม. ANC และ บัดส์ Z5 Pro (฿7,990) ไดรเวอร์ 11 มม. ANC + LDAC", "3": "มี 3 รุ่น: บัดส์ Z5 (฿5,490), บัดส์ Z5 Pro (฿7,990), และ บัดส์ Z5 Pro สีทอง Limited (฿8,490 — สินค้าหมด)", "4": "มีรุ่นเดียวคือ บัดส์ Z5 Pro ราคา ฿7,990 ไดรเวอร์ 11 มม. รองรับ ANC และ Hi-Res Audio", "5": "มี 2 รุ่น: บัดส์ Z5 (฿5,490) ไดรเวอร์ 12 มม. ANC และ บัดส์ Z5 Pro สีทอง Limited (฿8,490) สินค้าหมด", "6": "มี 4 รุ่น: Z5 (฿5,490), Z5 Pro (฿7,990), Z5 Lite (฿3,490), Z5 Pro สีทอง (฿8,490) — ครบทุกราคา", "7": "มีรุ่นเดียวคือ บัดส์ Z5 Pro สีทอง Limited ราคา ฿8,490 เป็นรุ่นพิเศษที่มีสีทองเท่านั้น", "8": "มี 2 รุ่น: บัดส์ Z5 Pro (฿7,990) ไดรเวอร์ 11 มม. ANC + LDAC และ Z5 Pro สีทอง Limited (฿8,490)", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 46, "q": "จอ 27 นิ้ว 4K มีรุ่นอะไรบ้างครับ?", "choices": {"1": "มี 2 รุ่น: อาร์คเวฟ ProView 27 4K (฿12,990) เป็นจอมอนิเตอร์เท่านั้น และ ดาวเหนือ All-in-One 27 (฿34,990) เป็นคอมพิวเตอร์ครบชุดที่มีจอ 27 นิ้ว 4K ในตัว", "2": "มีรุ่นเดียวคือ อาร์คเวฟ ProView 27 4K ราคา ฿12,990 จอ IPS 60Hz HDR400 กำลังขับ USB-C PD 65W เป็นจอมอนิเตอร์อย่างเดียว ไม่มีคอมในตัว", "3": "มีรุ่นเดียวคือ ดาวเหนือ All-in-One 27 ราคา ฿34,990 คอมพิวเตอร์ในตัว ชิปเซ็ต DaoNuea D5, RAM 16GB, SSD 512GB, จอ IPS 4K 60Hz", "4": "มี 3 รุ่น: ProView 27 4K จอมอนิเตอร์ (฿12,990), All-in-One 27 คอมในตัว (฿34,990), และ All-in-One 24 จอ 24 นิ้ว FHD (฿27,990) ที่เป็น 4K เช่นกัน", "5": "ไม่มีจอ 27 นิ้ว 4K ที่ร้านฟ้าใหม่ มีแต่จอ 27 นิ้ว FHD คือ ProView 27 FHD ราคา ฿8,990 ของ ArcWave เป็นจอมอนิเตอร์ IPS 60Hz", "6": "มี 2 รุ่น: ProView 27 4K (฿12,990) จอ IPS 60Hz HDR400 และ ProView 27 FHD (฿8,990) จอ IPS 75Hz — ทั้งคู่เป็นแบรนด์ ArcWave จอมอนิเตอร์", "7": "มีรุ่นเดียวคือ ProView 27 4K แต่ราคา ฿34,990 เพราะเป็นรุ่นที่มีคอมพิวเตอร์ในตัวเหมือน All-in-One ใช้งานได้เลย จอ IPS 60Hz 4K", "8": "มี 2 รุ่น: ดาวเหนือ All-in-One 27 (฿34,990) จอ 4K คอมในตัว ชิป D5 และ All-in-One 24 (฿27,990) จอ FHD 24 นิ้ว ชิป D3", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 47, "q": "จอ 27 นิ้ว 4K ของดาวเหนือ ราคาเท่าไหร่คะ", "choices": {"1": "฿12,990 — ProView 27 4K ของ ArcWave เป็นจอมอนิเตอร์เท่านั้น ไม่ใช่แบรนด์ดาวเหนือ จอ IPS 60Hz HDR400 รองรับ USB-C PD 65W (AW-MN-001)", "2": "฿34,990 — ดาวเหนือ All-in-One 27 เป็นคอมพิวเตอร์ครบชุดจอ 27 นิ้ว 4K ในตัว", "3": "฿27,990 — ดาวเหนือ All-in-One 24 ที่มีจอ 24 นิ้ว FHD เป็นคนละรุ่นกับที่ถาม จอ 24 นิ้ว ไม่ใช่ 27 นิ้ว ชิป D3, RAM 8GB, SSD 256GB (DN-DT-005) ไม่ใช่ 4K", "4": "฿29,990 — ดาวเหนือ All-in-One 27 ราคาลดพิเศษเมื่อซื้อพร้อมคีย์บอร์ดและเมาส์ไร้สาย จอ 4K IPS 60Hz ชิป D5 RAM 16GB SSD 512GB (ไม่มีโปรนี้จริง)", "5": "มี 2 รุ่นของดาวเหนือ: All-in-One 27 (฿34,990) ชิป D5 จอ 4K และ ProView 27 (฿12,990) จอ 4K — ทั้งคู่เป็นแบรนด์ดาวเหนือ", "6": "฿39,990 — ดาวเหนือ All-in-One 27 รุ่น Pro ที่มี RAM 32GB และ SSD 1TB ชิปเซ็ต D5 Pro จอ 4K IPS สำหรับงานออกแบบ (ไม่มีจริง)", "7": "฿24,990 — ดาวเหนือ All-in-One 27 ลดราคาล้างสต็อกจาก ฿34,990 เหลือ ฿24,990 เพราะเตรียมเปิดตัวรุ่นใหม่ All-in-One 27 (2025) ชิป D5 Pro (DN-DT-004, ราคาจริง ฿34,990)", "8": "฿19,990 — ดาวเหนือ ProView 27 4K ที่ราคาแพงกว่ารุ่น ArcWave เพราะเป็นแบรนด์ในเครือ จอ IPS 4K 60Hz HDR600 รองรับ USB-C PD 65W (ไม่มีจริง)", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 48, "q": "คลื่นเสียง 300 ราคาเท่าไหร่", "choices": {"1": "฿2,490 — เฮดออน 300 หูฟังครอบหูไร้สาย ไดรเวอร์ 40 มม. ไม่มี ANC แบต 50 ชม. BT 5.1 (ไม่รวม SoundBar 300 ที่ชื่อตรงกับคำค้นด้วย)", "2": "฿7,990 — SoundBar 300 ลำโพงซาวด์บาร์ 3.1ch กำลังขับ 80W RMS พร้อม HDMI ARC และ Optical (ไม่รวมเฮดออน 300 ที่ชื่อตรงกันด้วย)", "3": "฿7,490 — SoundPillar 300 ของ ArcWave ซึ่งเป็นคนละแบรนด์กับคลื่นเสียง (3.0ch, 60W RMS, ไม่มี center channel, HDMI ARC)", "4": "฿4,990 — เฮดออน 500 รุ่นกลางของคลื่นเสียง ไม่ใช่รุ่น 300 (มี ANC, Bluetooth 5.2, ไดรเวอร์ 40 มม. แบต 35 ชม.)", "5": "฿2,990 — เฮดออน 300 รุ่นพิเศษที่มี ANC เพิ่มมาจากรุ่นมาตรฐาน ไดรเวอร์ 40 มม. BT 5.1 แบต 40 ชม. (ไม่มีจริง)", "6": "฿8,990 — SoundBar Pro 500 ของคลื่นเสียง รุ่นท็อป 5.1ch กำลังขับ 200W พร้อม wireless subwoofer แยก (ไม่ใช่รุ่น 300)", "7": "฿15,990 — SoundBar 300 รุ่น Premium มาพร้อม wireless subwoofer แยก และรองรับ Dolby Atmos กำลังขับ 120W (ไม่มีจริง)", "8": "มีสินค้าที่ตรงกัน 2 รายการ: เฮดออน 300 (หูฟังครอบหู) ราคา ฿2,490 และ SoundBar 300 (ลำโพง) ราคา ฿7,990 — กรุณาระบุว่าต้องการสินค้าชิ้นไหน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 49, "q": "เฮดออน 300 มีสีอะไรบ้าง?", "choices": {"1": "Black, White, Navy Blue — เฮดออน 300 มาตรฐาน (KS-HP-005) เท่านั้น สเปค: ไดรเวอร์ 40 มม. BT 5.1 แบต 50 ชม. ไม่มี ANC (฿2,490)", "2": "FahMai Blue เท่านั้น — เป็นสีพิเศษสีเดียวของเฮดออน 300 ทุกรุ่น ผลิตจำนวนจำกัด ไม่มีสีอื่นให้เลือก (฿2,490)", "3": "Black, White, Navy Blue, FahMai Blue — ทุกสีอยู่ใน SKU เดียวกันของเฮดออน 300 เลือกสีได้ตอนสั่งซื้อ สเปคเหมือนกันทุกสี (฿2,490)", "4": "Black, White — มีสองสีมาตรฐานเท่านั้น ส่วน Navy Blue และ FahMai Blue เลิกผลิตแล้วเพราะขายไม่ดี (฿2,490)", "5": "Matte Black เท่านั้น — เฮดออน 300 มาเฉพาะสี Matte Black เหมือนซาวด์บาร์และลำโพงอื่น ๆ ของคลื่นเสียง (฿2,490)", "6": "มี 2 รุ่น: เฮดออน 300 มาตรฐาน (สี Black, White, Navy Blue) และ เฮดออน 300 ฟ้าใหม่ เอดิชัน (สี FahMai Blue พิเศษ) ราคาเท่ากันที่ ฿2,490", "7": "Black, White, Navy Blue, Red — มี 4 สีในรุ่นมาตรฐาน สี Red เพิ่มมาใหม่ในปี 2569 สเปคเหมือนกัน ไดรเวอร์ 40 มม. แบต 50 ชม. (฿2,490)", "8": "มีสีเดียวคือ Navy Blue — เป็นสีเอกลักษณ์ประจำรุ่นเฮดออน 300 ไม่มีสี Black หรือ White ให้เลือก (฿2,490)", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 50, "q": "แอร์บุ๊ก 14 RAM เท่าไหร่ครับ?", "choices": {"1": "8GB LPDDR5 — แอร์บุ๊ก 14 มีรุ่นเดียว RAM 8GB LPDDR5 บัดกรีในตัว เพิ่มไม่ได้ ชิปเซ็ต DaoNuea D1 จอ 2K 14 นิ้ว แบต 20 ชม. (ราคา ฿24,990)", "2": "16GB LPDDR5 — แอร์บุ๊ก 14 มีรุ่นเดียว RAM 16GB LPDDR5 บัดกรีในตัว เพิ่มไม่ได้ ชิปเซ็ต DaoNuea D1 จอ 2K 14 นิ้ว แบต 20 ชม. (ราคา ฿29,990)", "3": "12GB LPDDR5 — แอร์บุ๊ก 14 มีรุ่นเดียว RAM 12GB unified memory ร่วมกับชิปเซ็ต D1 จอ 2K 14 นิ้ว หนัก 1.1 กก. แบต 20 ชม. (ราคา ฿27,490)", "4": "32GB LPDDR5 — แอร์บุ๊ก 14 รุ่นท็อปมี RAM 32GB LPDDR5 บัดกรีในตัว สำหรับงาน multitask หนัก ชิป D1 จอ 2K 14 นิ้ว แบต 20 ชม. (ราคา ฿39,990)", "5": "มี 2 รุ่น: แอร์บุ๊ก 14 (฿29,990) มี RAM 16GB LPDDR5 และ แอร์บุ๊ก 14 รุ่น 8GB (฿24,990) มี RAM 8GB LPDDR5 — ทั้งสองรุ่น RAM บัดกรีในตัว ไม่สามารถเพิ่มได้", "6": "16GB DDR4 — แอร์บุ๊ก 14 ใช้ RAM DDR4 แบบ SO-DIMM สามารถถอดเปลี่ยนเพิ่มเองภายหลังได้ถึง 32GB ชิป D1 จอ 2K 14 นิ้ว (ราคา ฿29,990)", "7": "8GB DDR4 — แอร์บุ๊ก 14 รุ่นประหยัด ใช้ RAM DDR4 แบบ SO-DIMM ถอดเปลี่ยนเพิ่มได้ภายหลัง ชิป D1 จอ 2K 14 นิ้ว แบต 20 ชม. (ราคา ฿22,990)", "8": "4GB LPDDR5 — แอร์บุ๊ก 14 รุ่นเริ่มต้นมี RAM 4GB LPDDR5 บัดกรีในตัว เพิ่มไม่ได้ เหมาะกับงานเบา ๆ ชิป D1 จอ 2K (ราคา ฿19,990)", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 51, "q": "แท่นชาร์จไร้สาย 15W ที่ร้านฟ้าใหม่มีตัวไหนบ้าง", "choices": {"1": "มีแค่ QiPad 15 ของจุดเชื่อม ราคา ฿990 รองรับ Qi 15W มาพร้อมไฟ LED แสดงสถานะ น้ำหนัก 68 กรัม", "2": "มีแค่ ChargePad 15W ของพัลส์เกียร์ ราคา ฿890 รองรับ Qi 15W พื้นผิวซิลิโคนกันลื่น ประกัน 1 ปี", "3": "มี 3 รุ่นจากหลายแบรนด์: QiPad 15 (฿990), ChargePad 15W (฿890) และ QiPad Pro 15W (฿1,490)", "4": "มีแค่ QiPad 15 ราคา ฿890 ของจุดเชื่อม เป็นแท่นชาร์จ Qi 15W สีขาว น้ำหนัก 68 กรัม ประกัน 6 เดือน", "5": "ไม่มีแท่นชาร์จไร้สาย 15W ที่ร้านฟ้าใหม่ มีแต่รุ่น 10W คือ QiPad 10 ของจุดเชื่อม ราคา ฿690 รองรับ Qi มาตรฐาน", "6": "มีแค่ ChargePad 15W ราคา ฿990 ของพัลส์เกียร์ พื้นผิวซิลิโคนกันลื่น รองรับ iPhone และ Android", "7": "มี 2 รุ่น: จุดเชื่อม QiPad 15 (฿990) และ พัลส์เกียร์ ChargePad 15W (฿890) — ทั้งคู่เป็นแท่นชาร์จ Qi 15W แต่คนละแบรนด์", "8": "มี 2 รุ่น แต่ ChargePad 15W ของพัลส์เกียร์สินค้าหมด เหลือเฉพาะ QiPad 15 ของจุดเชื่อม (฿990) พร้อมส่งทันที ประกัน 6 เดือน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 52, "q": "สายฟ้า แท็บ A5 ราคาเท่าไหร่คะ?", "choices": {"1": "฿13,990 — แท็บ A5 รุ่น LTE+WiFi มีรุ่นเดียว (สเปค: จอ 10.9 นิ้ว IPS LCD, ชิป T5, RAM 4GB, แบต 7,040 mAh, น้ำหนัก 478 กรัม, กันน้ำไม่มี IP)", "2": "฿11,990 — แท็บ A5 WiFi Only มีรุ่นเดียว (สเปค: จอ 10.9 นิ้ว IPS LCD, ชิป T5, RAM 4GB, แบต 7,040 mAh, น้ำหนัก 462 กรัม, ไม่มีซิม)", "3": "฿12,990 — แท็บ A5 มีรุ่นเดียว ราคาเฉลี่ยระหว่างรุ่น LTE กับ WiFi (ชิป T5, RAM 4GB, จอ 10.9 นิ้ว, ชาร์จ 18W, FahMai OS 3)", "4": "มี 2 รุ่นที่ตรงกัน: แท็บ A5 (รุ่น LTE+WiFi) ราคา ฿13,990 และ แท็บ A5 WiFi ราคา ฿11,990 — สเปคเหมือนกัน ต่างที่รุ่น WiFi ไม่มีซิมการ์ด", "5": "฿14,990 — แท็บ A5 รุ่น 5G ปรับราคาขึ้นจากเดิม เนื่องจากชิปเซ็ตรุ่นใหม่ T5 Pro (RAM 6GB, จอ 10.9 นิ้ว, แบต 7,040 mAh)", "6": "฿10,990 — แท็บ A5 WiFi โปรลดราคาพิเศษ ลดจากปกติ ฿11,990 เหลือ ฿10,990 ถึงสิ้นเดือน (ชิป T5, RAM 4GB, จอ 10.9 นิ้ว IPS LCD)", "7": "฿15,990 — แท็บ A5 รุ่น 5G Premium มี RAM 6GB, SSD 128GB, ชิป T5 Pro ราคาแพงกว่ารุ่นธรรมดา (จอ 10.9 นิ้ว, แบต 7,040 mAh)", "8": "฿9,990 — แท็บ A5 WiFi ลดราคาล้างสต็อกเพราะเตรียมเปิดตัวรุ่น A6 WiFi เร็ว ๆ นี้ (ชิป T5, RAM 4GB, จอ 10.9 นิ้ว IPS LCD)", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 53, "q": "เปลี่ยนจอ สายฟ้า โฟน X9 Pro ค่าซ่อมเท่าไหร่ครับ?", "choices": {"1": "3,500 บาท", "2": "4,990 บาท", "3": "5,500 บาท", "4": "6,200 บาท", "5": "2,990 บาท", "6": "7,500 บาท", "7": "4,200 บาท", "8": "8,000 บาท", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 54, "q": "สายฟ้า โฟน X9 Pro Max ผลิตที่ประเทศอะไรครับ?", "choices": {"1": "ไทย", "2": "จีน", "3": "เวียดนาม", "4": "อินเดีย", "5": "ไต้หวัน", "6": "เกาหลีใต้", "7": "มาเลเซีย", "8": "อินโดนีเซีย", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 55, "q": "ฟ้าใหม่มีรายได้ต่อปีเท่าไหร่ครับ?", "choices": {"1": "500 ล้านบาท", "2": "1.2 พันล้านบาท", "3": "800 ล้านบาท", "4": "2.5 พันล้านบาท", "5": "350 ล้านบาท", "6": "1.8 พันล้านบาท", "7": "3 พันล้านบาท", "8": "950 ล้านบาท", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 56, "q": "ดาวเหนือ AirBook 13 น้ำหนักเท่าไหร่คะ?", "choices": {"1": "0.95 กิโลกรัม", "2": "1.0 กิโลกรัม", "3": "1.1 กิโลกรัม", "4": "1.2 กิโลกรัม", "5": "1.05 กิโลกรัม", "6": "0.9 กิโลกรัม", "7": "1.15 กิโลกรัม", "8": "1.3 กิโลกรัม", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 57, "q": "สายฟ้า โฟน X9 Pro สัดส่วนหน้าจอต่อตัวเครื่อง (screen-to-body ratio) เท่าไหร่คะ?", "choices": {"1": "89.5%", "2": "91.2%", "3": "93.8%", "4": "87.3%", "5": "95.1%", "6": "90.6%", "7": "88.0%", "8": "92.4%", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 58, "q": "คลื่นเสียง บัดส์ Z5 Pro คะแนนรีวิวจากผู้ใช้เฉลี่ยเท่าไหร่ครับ?", "choices": {"1": "4.2 / 5 ดาว", "2": "4.5 / 5 ดาว", "3": "4.7 / 5 ดาว", "4": "3.9 / 5 ดาว", "5": "4.8 / 5 ดาว", "6": "4.0 / 5 ดาว", "7": "4.3 / 5 ดาว", "8": "4.6 / 5 ดาว", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 59, "q": "สายฟ้า โฟน X9 Pro Max ค่า SAR เท่าไหร่ครับ?", "choices": {"1": "0.85 W/kg", "2": "1.12 W/kg", "3": "0.67 W/kg", "4": "1.45 W/kg", "5": "0.98 W/kg", "6": "0.52 W/kg", "7": "1.28 W/kg", "8": "0.74 W/kg", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 60, "q": "วันหยุดราชการปี 2569 มีกี่วันครับ?", "choices": {"1": "16 วัน", "2": "17 วัน", "3": "18 วัน", "4": "19 วัน", "5": "20 วัน", "6": "15 วัน", "7": "21 วัน", "8": "22 วัน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 61, "q": "ตั๋วเครื่องบินกรุงเทพ-เชียงใหม่ราคาเท่าไหร่คะ?", "choices": {"1": "890 บาท", "2": "1,200 บาท", "3": "1,590 บาท", "4": "2,100 บาท", "5": "2,500 บาท", "6": "3,200 บาท", "7": "990 บาท", "8": "1,890 บาท", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 62, "q": "ตอนนี้ดอกเบี้ยเงินฝากออมทรัพย์กี่เปอร์เซ็นต์คะ?", "choices": {"1": "0.25% ต่อปี", "2": "0.50% ต่อปี", "3": "1.00% ต่อปี", "4": "1.50% ต่อปี", "5": "0.75% ต่อปี", "6": "2.00% ต่อปี", "7": "0.10% ต่อปี", "8": "1.25% ต่อปี", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 63, "q": "สูตรผัดกระเพราหมูสับทำยังไงคะ?", "choices": {"1": "ผัดกระเทียมก่อนแล้วใส่หมู", "2": "ใส่น้ำมันหอย ซอสปรุงรส น้ำตาล", "3": "ใช้ไฟแรงผัดให้หมูสุกก่อนใส่ใบกระเพรา", "4": "หมักหมูกับซีอิ๊วก่อนผัด", "5": "ใส่พริกขี้หนูสวนบุบพอแตก", "6": "ผัดไข่ดาวแยกต่างหากเสิร์ฟข้าง", "7": "ใช้ใบกระเพราแดงจะหอมกว่า", "8": "เติมน้ำเล็กน้อยกันไหม้", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 64, "q": "เคสชาร์จของ NovaBuds Pro ชาร์จไร้สายได้ป่าวครับ? แล้วเทียบกับ บัดส์ Z5 Pro ล่ะ", "choices": {"1": "ทั้ง NovaBuds Pro และ Z5 Pro รองรับชาร์จไร้สาย Qi เหมือนกัน เพราะเป็นหูฟังระดับ Pro ทั้งคู่", "2": "NovaBuds Pro รองรับชาร์จไร้สาย Qi แต่ Z5 Pro ไม่รองรับ ชาร์จผ่าน USB-C อย่างเดียว", "3": "ทั้งคู่ไม่รองรับชาร์จไร้สาย ชาร์จผ่าน USB-C อย่างเดียว เป็นข้อจำกัดของหูฟัง TWS ราคากลาง", "4": "NovaBuds Pro ชาร์จไร้สายได้ เฉพาะเมื่อใช้แท่นชาร์จ NovaTech เท่านั้น", "5": "NovaBuds Pro ไม่รองรับชาร์จไร้สาย (USB-C เท่านั้น) ส่วน Z5 Pro รองรับชาร์จไร้สาย Qi", "6": "Z5 Pro รองรับชาร์จไร้สายเฉพาะแท่น QiPad 15 ส่วน NovaBuds Pro ใช้ได้ทุกแท่น", "7": "NovaBuds Pro รองรับ Qi2 (MagSafe) ส่วน Z5 Pro รองรับ Qi รุ่นเก่า วางชาร์จได้แต่ไม่มีแม่เหล็ก", "8": "ทั้งคู่ต้องซื้อเคสชาร์จไร้สายแยก ราคา ฿590-790 เพราะเคสมาตรฐานรองรับ USB-C อย่างเดียว", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 65, "q": "สายฟ้า X9 กับ X9 FE ชิปเหมือนกันจริงมั้ย แล้วตัว FE ถูกกว่าตรงไหน", "choices": {"1": "ชิปต่างกัน X9 ใช้ S9 Pro (8-core) ส่วน X9 FE ใช้ S9 Lite (6-core) ที่เป็นชิปลดสเปคลง ประหยัดพลังงานกว่า ราคาถูกกว่า ฿3,000", "2": "ชิปต่างกัน FE ใช้ชิปรุ่นเก่ากว่า S8 ที่ลดมาจากเรือธงรุ่นก่อน ทำให้ประหยัดต้นทุนการผลิตได้มากขึ้น ราคาถูกกว่า ฿3,000", "3": "ชิปเหมือนกันคือ S9 ทั้งคู่ FE ถูกกว่าเพราะตัดเรื่อง OIS กล้อง ไม่มี Ultrawide และใช้เฟรมพลาสติก Polycarbonate แทนอะลูมิเนียม ราคาต่างกัน 3,000 บาท", "4": "ชิปเหมือนกันคือ S9 ทั้งคู่ แต่ FE ถูกกว่าเพราะแบตเล็กกว่า 4,200 mAh แทน 4,800 mAh ใช้งานได้สั้นกว่า ราคาต่างกัน ฿3,000", "5": "ชิปเหมือนกัน S9 ทั้งคู่ ต่างกันแค่สีตัวเครื่อง FE มีสีเพิ่ม 2 สีพิเศษ ราคาต่างกัน 1,000 บาท (฿16,990 vs ฿15,990) สเปคเท่ากัน", "6": "ชิปเหมือนกัน S9 ทั้งคู่ แต่ FE ถูกกว่าเพราะลดขนาดหน้าจอจาก 6.5 นิ้ว เหลือ 6.1 นิ้ว ตัวเครื่องเล็กลง แบตเท่ากัน 4,800 mAh", "7": "ชิปเหมือนกัน S9 ทั้งคู่ แต่ FE ถูกกว่าเพราะไม่กันน้ำ ตัดมาตรฐาน IP ออกเพื่อลดต้นทุนการผลิตลง ราคาต่าง ฿3,000", "8": "ชิปเหมือนกัน S9 ทั้งคู่ แต่ FE ถูกกว่าเพราะใช้หน้าจอ IPS LCD แทน AMOLED สีสันและความคมชัดต่างกันพอสมควร ราคาต่าง ฿3,000", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 66, "q": "โน้ตบุ๊ก SlimBook 14 ของ NovaTech มีบริการ on-site service ซ่อมถึงบ้านไหมคะ", "choices": {"1": "มีบริการ on-site service ปีแรก เหมือนแล็ปท็อปดาวเหนือทั่วไป เช่น AirBook 14 ที่ช่างมาซ่อมถึงบ้าน", "2": "มี on-site service ตลอด 2 ปีเต็ม เพราะ NovaTech เป็นแบรนด์พันธมิตรที่ให้บริการเทียบเท่าแบรนด์ในเครือ", "3": "มี on-site service แต่เฉพาะในกรุงเทพฯ และปริมณฑล เท่านั้น ต่างจังหวัดต้องส่งเครื่องเข้าศูนย์ NovaTech", "4": "มี on-site ถ้าลงทะเบียนออนไลน์ที่ novatech.co.th ภายใน 30 วัน จะได้รับสิทธิ์ on-site service ปีแรก", "5": "ไม่มี on-site เพราะ SlimBook 14 ราคาต่ำกว่า ฿30,000 ซึ่งเป็นเกณฑ์ขั้นต่ำสำหรับสิทธิ์ on-site service", "6": "มี on-site service เหมือนแอร์บุ๊ก 14 ของดาวเหนือ เพราะซื้อจากร้านฟ้าใหม่เหมือนกัน ได้สิทธิ์เท่ากัน", "7": "ไม่มี on-site service ต้องส่งเครื่องเข้าศูนย์ NovaTech เท่านั้น เพราะเป็นแบรนด์พันธมิตร", "8": "ไม่มี on-site เพราะ NovaTech เพิ่งเป็นแบรนด์พันธมิตรใหม่ ยังไม่ได้เปิดศูนย์บริการในไทย", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 67, "q": "แท็บ A5 WiFi ใส่ซิมโทรออกได้มั้ยครับ", "choices": {"1": "ได้ ใส่ซิม 5G ได้เลย เพราะ A5 WiFi สเปคเหมือน A5 ทุกอย่าง ชิป T5 RAM 4GB รวมถึงรองรับ nano SIM 5G", "2": "ได้ แต่รองรับเฉพาะ 4G LTE เพราะรุ่น WiFi ไม่มีเสาสัญญาณ 5G ในตัว รองรับซิม nano SIM 4G LTE เท่านั้น", "3": "ได้ แต่ต้องใช้ eSIM เท่านั้น ไม่มีช่องใส่ซิมจริง เปิดใช้งาน eSIM ผ่านแอป FahMai Connect ได้ทันที ใช้เน็ต 4G", "4": "ใส่ซิมไม่ได้ เพราะ A5 WiFi เป็นรุ่นสำหรับเด็ก ตัดฟีเจอร์ซิมออกเพื่อความปลอดภัย", "5": "ได้ เพราะ A5 กับ A5 WiFi สเปคเหมือนกันทุกอย่าง ชิป T5, RAM 4GB, แบต 7,040 mAh, จอ 10.9 นิ้ว IPS LCD", "6": "ไม่ได้ แท็บ A5 WiFi เป็นรุ่น WiFi Only ไม่มีช่องซิมและไม่รองรับเซลลูลาร์ ถ้าต้องการใส่ซิมต้องเลือกแท็บ A5 ที่ราคา 13,990", "7": "ได้ ถ้าแชร์ hotspot จากมือถือก่อนแล้วใช้แอปโทร เช่น LINE Call หรือ FahMai Talk ผ่าน WiFi ได้ (ไม่ต้องใส่ซิม)", "8": "ใส่ซิมไม่ได้ เพราะ A5 WiFi ใช้ชิป T5 Lite ที่ไม่มีโมเด็มเซลลูลาร์ ต่างจาก T5 ปกติ", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 68, "q": "หูฟัง Sport X กับ Sport Lite กันน้ำต่างกันยังไงครับ ผมอยากใส่ว่ายน้ำ", "choices": {"1": "Sport X เป็น IP67 แช่น้ำได้ 1 เมตร 30 นาที ส่วน Sport Lite เป็น IPX5 กัน splash เท่านั้น แช่น้ำไม่ได้", "2": "ทั้งสองรุ่นเป็น IP67 กันน้ำเหมือนกัน แช่น้ำ 1 เมตร 30 นาทีได้ทั้งคู่ เพราะเป็นรุ่น Sport เหมือนกัน", "3": "Sport X เป็น IPX5 กัน splash เท่านั้น ส่วน Sport Lite เป็น IP67 แช่น้ำได้ เพราะ Lite ออกแบบมาเพื่อว่ายน้ำ", "4": "ทั้งสองรุ่นเป็น IPX5 กัน splash เท่านั้น ใส่ออกกำลังกายกันเหงื่อได้ แต่ห้ามว่ายน้ำทั้งสองรุ่น", "5": "Sport X เป็น IP68 จมน้ำได้ 2 เมตร นาน 1 ชั่วโมง ส่วน Sport Lite เป็น IPX4 กันฝนเบา ๆ เท่านั้น", "6": "ทั้งสองรุ่นเป็น IP54 เหมือนบัดส์ Z5 Pro กันน้ำระดับกลาง กันฝนได้แต่ห้ามว่ายน้ำ ทั้ง Sport X และ Lite", "7": "Sport Lite กันน้ำดีกว่าเพราะราคาถูกกว่า ออกแบบมาเพื่อออกกำลังกายโดยเฉพาะ", "8": "Sport X เป็น IPX7 แช่น้ำ 1 เมตรได้ 30 นาที ส่วน Sport Lite เป็น IPX5 กัน splash เท่านั้น ว่ายน้ำไม่ได้", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 69, "q": "ซื้อ SaiFah Pen Gen 2 มาใช้กับแท็บ Draw Pro ได้มั้ยครับ", "choices": {"1": "ได้ เพราะเป็นปากกาของสายฟ้าเหมือนกัน ใช้ได้กับแท็บเล็ตสายฟ้าทุกรุ่นที่รองรับปากกา 4,096 ระดับแรงกด", "2": "ใช้ไม่ได้ Draw Pro ใช้ระบบ EMR คนละระบบกับ SaiFah Pen และรองรับเฉพาะ Draw Pro Pen ที่มาพร้อมกล่อง", "3": "ได้ แต่จะใช้ได้เฉพาะฟังก์ชันวาดพื้นฐาน ไม่ได้ pressure sensitivity เต็ม 4,096 ระดับ จะเหลือแค่ 1,024 ระดับ", "4": "ได้ แต่ต้องอัปเดตซอฟต์แวร์ FahMai OS เป็นเวอร์ชันล่าสุดก่อน จึงจะรองรับ SaiFah Pen Gen 2 ได้", "5": "ได้ แต่ต้องซื้อ adapter EMR-to-AES แยกต่างหากเพื่อแปลงสัญญาณให้เข้ากันได้ (ราคา ฿790)", "6": "ได้ เพราะทั้งคู่รองรับ 4,096 ระดับแรงกดเหมือนกัน ใช้เทคโนโลยีเดียวกัน ชาร์จแม่เหล็กได้ปกติ", "7": "ใช้ไม่ได้ เพราะ SaiFah Pen Gen 2 รองรับเฉพาะ Tab S9 Pro เท่านั้น ไม่รองรับรุ่นอื่น", "8": "ใช้ไม่ได้ เพราะ Draw Pro เป็นรุ่นสำหรับมืออาชีพ ล็อกให้ใช้ได้เฉพาะปากกาที่แถมมาในกล่องเท่านั้น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 70, "q": "ProView 27 4K ของ ArcWave เป็นคอมพิวเตอร์เหมือน All-in-One 27 ไหมคะ อยากได้ตัวที่เปิดมาใช้งานได้เลย", "choices": {"1": "ใช่ ทั้งสองรุ่นเป็นคอมพิวเตอร์ All-in-One เหมือนกัน ต่างกันแค่แบรนด์ ArcWave (฿12,990) กับดาวเหนือ (฿34,990)", "2": "ProView 27 เป็นคอมพิวเตอร์เหมือนกัน แต่ใช้ OS ของ ArcWave แทน DaoNuea OS สเปคใกล้เคียงแต่ราคาถูกกว่า", "3": "ProView 27 ไม่ใช่คอมพิวเตอร์ เพราะราคา ฿12,990 ถูกเกินกว่าจะเป็น All-in-One ที่มีชิปประมวลผลในตัว", "4": "ProView 27 เป็นคอมพิวเตอร์ราคาถูกกว่า All-in-One 27 ใช้ชิปเซ็ตของ ArcWave แทน DaoNuea D5", "5": "ProView 27 ไม่ใช่คอมพิวเตอร์ เพราะ ArcWave เป็นแบรนด์พันธมิตรที่ผลิตเฉพาะอุปกรณ์เสริม ไม่ผลิตคอมพิวเตอร์", "6": "ProView 27 เหมือน All-in-One 27 แต่ไม่มีลำโพงในตัว ต้องซื้อ SoundBar แยก (SoundBar 300 ฿7,990)", "7": "ProView 27 เป็น All-in-One รุ่นประหยัดจาก ArcWave ราคา ฿12,990 ใช้ชิปเซ็ตอินเทลรุ่นเริ่มต้น", "8": "ProView 27 4K เป็นจอมอนิเตอร์เท่านั้น ไม่มีคอมพิวเตอร์ในตัว ต้องต่อเครื่องแยก ส่วน All-in-One 27 เป็นคอมพิวเตอร์ครบชุด", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 71, "q": "Dock Pro กับ Dock AirBook Edition ต่างกันยังไงครับ ผมมี SlimBook 14 ใช้ตัวไหนได้บ้าง", "choices": {"1": "ใช้ได้ทั้งสองตัว เพราะเชื่อมต่อผ่าน USB-C เหมือนกัน SlimBook 14 มี USB-C 3.2 Gen2 สองพอร์ต Dock Pro ต่อ USB-C ได้เลย ส่วน Dock AirBook ก็ใช้ USB-C เหมือนกัน ไม่จำกัดรุ่น", "2": "ใช้ Dock AirBook Edition ได้ เพราะเป็น dock ราคาถูกกว่า Dock Pro (฿3,490 vs ฿4,990) และใช้พอร์ต USB-C มาตรฐาน เชื่อมต่อกับโน้ตบุ๊กทุกรุ่นที่มี USB-C ได้", "3": "ใช้ไม่ได้ทั้งสองตัว เพราะ SlimBook 14 ของ NovaTech ไม่มี Thunderbolt 4 ไม่มีขั้วแม่เหล็ก AirBook และไม่รองรับ dock ของจุดเชื่อม (JudChuam) ทุกรุ่น ต้องใช้ Hub USB-C 7-in-1 แทน", "4": "Dock AirBook Edition ออกแบบเฉพาะ AirBook series ใช้ระบบแม่เหล็กเฉพาะตัว ไม่รองรับ SlimBook ส่วน Dock Pro ก็ต้องใช้ Thunderbolt 4 ซึ่ง SlimBook ไม่มี จึงใช้ไม่ได้เต็มประสิทธิภาพทั้งคู่", "5": "ใช้ Dock Pro ได้เต็มประสิทธิภาพ เพราะเป็น dock universal ที่รองรับ USB-C 3.2 Gen2 ขึ้นไป SlimBook 14 มี USB-C 3.2 Gen2 จึงเข้ากันได้", "6": "ใช้ Dock AirBook Edition ได้ เพราะแม้ชื่อบอกว่า AirBook แต่ใช้ USB-C มาตรฐาน เชื่อมต่อได้กับโน้ตบุ๊กที่มี USB-C ทุกรุ่นรวมถึง SlimBook", "7": "ใช้ได้ทั้งคู่ แต่ต้องซื้อ adapter แม่เหล็ก (฿590) จากจุดเชื่อมเพื่อแปลงขั้วต่อให้เข้ากับ SlimBook 14 ที่ไม่มีขั้วแม่เหล็กในตัว", "8": "ใช้ Dock Pro ได้เต็มประสิทธิภาพ เพราะ SlimBook 14 มีพอร์ต Thunderbolt 4 รองรับ ส่วน Dock AirBook Edition ต้องใช้กับ AirBook เท่านั้น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 72, "q": "เฮดโปร X1 กับ X1 SE สเปคต่างกันยังไงบ้างคะ?", "choices": {"1": "สเปคหลักเหมือนกัน ต่างกันที่ X1 SE มี ANC ดีกว่า ตัดเสียงได้ลึกกว่า 5 dB และมีโหมด Adaptive ANC เพิ่มเติม", "2": "X1 SE มีแบตเตอรี่ 40 ชั่วโมงขณะ ANC เปิด ส่วน X1 ได้ 30 ชั่วโมง และ SE รองรับ aptX HD เพิ่มเติมจาก LDAC", "3": "สเปคหลักเหมือนกัน ต่างกันที่ X1 SE แบตเตอรี่ 35 ชั่วโมง (ANC เปิด) ดีกว่า X1 ที่ได้ 30 ชั่วโมง", "4": "X1 SE รองรับ LDAC แต่ X1 ธรรมดาไม่รองรับ รองรับแค่ SBC และ AAC เท่านั้น ทำให้คุณภาพเสียงต่ำกว่า", "5": "X1 SE น้ำหนักเบากว่า X1 เยอะมาก (220 กรัม vs 253 กรัม) ใช้วัสดุคาร์บอนไฟเบอร์แทนอะลูมิเนียม", "6": "สเปคหลักเหมือนกัน ต่างกันที่ X1 SE รองรับ Multipoint 3 อุปกรณ์ ส่วน X1 ได้แค่ 2 อุปกรณ์", "7": "สเปคหลักเหมือนกัน ต่างกันที่ X1 SE ใช้หนังแท้ (Premium Leather) แทน PU และมีสี Lavender Gray เพิ่ม ราคาต่างกัน 500 บาท", "8": "X1 SE ตัดเสียงรบกวนแบบ Adaptive ANC ปรับระดับอัตโนมัติ ส่วน X1 เป็น ANC ธรรมดาที่ปรับได้แค่เปิด/ปิด", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 73, "q": "soundbar 300 ที่เป็น 3.1ch ยี่ห้ออะไรครับ ตัว SoundPillar 300 กับ SoundBar 300 งงว่าอันไหนเป็นอันไหน", "choices": {"1": "SoundPillar 300 ของ ArcWave เป็น 3.1ch มี center channel ในตัว กำลังขับ 60W RMS ราคา ฿7,490 เชื่อมต่อ HDMI ARC และ Optical", "2": "ทั้งสองรุ่นเป็น 3.1ch เหมือนกัน ต่างกันแค่แบรนด์ คลื่นเสียง (฿7,990) กำลังขับ 80W กับ ArcWave (฿7,490) กำลังขับ 60W", "3": "ทั้งสองรุ่นเป็น 3.0ch เหมือนกัน ไม่มี center channel ทั้งคู่ ต่างกันแค่กำลังขับ 80W vs 60W และราคา ฿7,990 vs ฿7,490", "4": "SoundBar 300 ของ ArcWave เป็น 3.1ch มี center channel กำลังขับ 80W RMS ราคา ฿7,990 เชื่อมต่อ HDMI ARC และ Optical", "5": "SoundPillar 300 เป็น 5.1ch มาพร้อม wireless subwoofer แยก ราคา ฿7,490 ส่วน SoundBar 300 เป็น 3.1ch ในตัว ราคา ฿7,990", "6": "SoundBar 300 ของคลื่นเสียง เป็น 3.1ch มี center channel ในตัว ส่วน SoundPillar 300 ของ ArcWave เป็น 3.0ch ไม่มี center channel", "7": "SoundPillar 300 เป็น 3.1ch เพราะราคา ฿7,490 ใกล้เคียงกับ SoundBar 300 ที่ ฿7,990 และมีกำลังขับ 60W RMS ใกล้เคียงกัน", "8": "SoundBar 300 เป็น 2.1ch (ซ้าย ขวา + subwoofer ในตัว) กำลังขับ 80W ส่วน SoundPillar 300 เป็น 3.0ch กำลังขับ 60W (ซ้าย ขวา + sub)", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 74, "q": "แอร์บุ๊ก 14 ตัวราคา 29,990 กับตัว 24,990 ต่างกันตรงไหนบ้างคะ", "choices": {"1": "ตัวแพงกว่าใช้ชิป D1 Pro 10-core ส่วนตัวถูกกว่าใช้ D1 ธรรมดา 8-core ประสิทธิภาพ GPU ต่างกัน 30%", "2": "ตัวแพงกว่ามีหน้าจอ 2K (2560x1600) ส่วนตัวถูกกว่าเป็น Full HD (1920x1080) สี sRGB ต่างกันด้วย", "3": "ตัวแพงกว่ามี Thunderbolt 4 จำนวน 2 พอร์ต ส่วนตัวถูกกว่ามี USB-C 3.2 Gen2 ธรรมดา 2 พอร์ต", "4": "ตัวแพงกว่าเบากว่า 1.0 กก. ใช้แมกนีเซียมอัลลอย ส่วนตัวถูกกว่าหนัก 1.2 กก. ใช้อะลูมิเนียมธรรมดา", "5": "ต่างกันเฉพาะ RAM (16GB vs 8GB) และ SSD (512GB vs 256GB) ตัวเครื่อง หน้าจอ แบต เหมือนกันหมด", "6": "ตัวแพงกว่าแบตอยู่ได้ 20 ชม. ใช้แบต 70Wh ส่วนตัวถูกกว่าอยู่ได้ 15 ชม. ใช้แบต 52Wh เล็กกว่า", "7": "ตัวแพงกว่ามีสี Champagne ให้เลือก ส่วนตัวถูกกว่าไม่มี ต่างกันแค่สี", "8": "ตัวแพงกว่ามี WiFi 6E (802.11ax) ส่วนตัวถูกกว่ามีแค่ WiFi 6 (802.11ax) ไม่รองรับ 6GHz band", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 75, "q": "แท็บ S8 Pro กับ S9 Pro อันไหนเป็นรุ่นปัจจุบันครับ แล้วต่างกันยังไง", "choices": {"1": "S8 Pro เป็นรุ่นปัจจุบัน ส่วน S9 Pro เป็นรุ่นเก่า ราคา S8 Pro ถูกกว่าเพราะเป็นรุ่นใหม่ที่ปรับราคาลง", "2": "ทั้งคู่เป็นรุ่นปัจจุบัน ต่างกันแค่ขนาดหน้าจอ S8 Pro จอ 11 นิ้ว ส่วน S9 Pro จอ 12.9 นิ้ว ราคาต่างกัน", "3": "ทั้งคู่เป็นรุ่นเก่า รุ่นปัจจุบันคือ S10 Pro ที่เพิ่งเปิดตัวมาพร้อมชิป T10 Pro ราคา ฿39,990", "4": "S8 Pro เป็นรุ่น Pro ตัวจริงใช้ชิประดับเรือธง ส่วน S9 Pro เป็นแค่รุ่น mid-range ที่ใส่ชื่อ Pro มา", "5": "S9 Pro เป็นรุ่นปัจจุบัน ราคาเท่ากันทั้งสองรุ่นที่ ฿34,990 ต่างกันแค่ชิป T8 Pro กับ T9 Pro", "6": "S9 Pro เป็นรุ่นปัจจุบัน ใช้ชิป T9 Pro และ Thunderbolt ส่วน S8 Pro เป็นรุ่นก่อนหน้าที่ลดราคาพิเศษ", "7": "ทั้งคู่ใช้ชิปเดียวกันคือ T8 Pro ต่างกันแค่สี S8 Pro มีสี Space Gray ส่วน S9 Pro มีสี Silver เพิ่ม", "8": "S8 Pro เป็นรุ่นปัจจุบัน มีสเปคดีกว่าเพราะราคา ฿24,990 ถูกกว่า S9 Pro ที่ ฿34,990 แต่ดีกว่าในทุกด้าน", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 76, "q": "StormBook G5 กับ G5 รุ่นปี 2024 อัปเกรด RAM ได้ทั้งคู่ไหมครับ", "choices": {"1": "G5 รุ่นปัจจุบันอัปเกรด RAM ได้เพราะใช้ SO-DIMM DDR5-5200 แต่ G5 รุ่นปี 2024 ใช้ RAM แบบ Soldered บัดกรีติดเมนบอร์ด อัปเกรดไม่ได้ เป็นข้อจำกัดของรุ่น Clearance ที่ต้องตรวจสอบก่อนซื้อ", "2": "G5 2024 อัปเกรดได้เพราะเป็นรุ่นเก่าออกแบบมาให้ซ่อมง่าย ใช้ SO-DIMM DDR4-3200 ส่วน G5 รุ่นปัจจุบันเปลี่ยนมาใช้ LPDDR5 บัดกรีติดบอร์ดเพื่อประหยัดพื้นที่และเพิ่มความเร็ว", "3": "อัปเกรดไม่ได้ทั้งคู่ครับ StormBook series ใช้ RAM แบบ Soldered ทุกรุ่น", "4": "อัปเกรดได้ทั้งคู่ โดยทั้ง G5 และ G5 2024 ใช้ DDR4-3200 SO-DIMM เหมือนกัน สามารถอัปเกรดได้สูงสุด 64GB ราคาแรม DDR4 16GB เริ่มต้นที่ ฿1,290 ขายที่ร้านฟ้าใหม่", "5": "อัปเกรดได้ทั้งคู่ครับ ทั้ง G5 และ G5 2024 ใช้ RAM แบบ SO-DIMM โดย G5 ใช้ DDR5 ส่วน G5 2024 ใช้ DDR4", "6": "อัปเกรดไม่ได้ทั้งคู่ ต้องเลือกรุ่น StormBook G7 ถึงจะอัปเกรด RAM ได้", "7": "G5 รุ่นปัจจุบันอัปเกรดได้เฉพาะ SSD เท่านั้น ส่วน RAM เป็น Soldered ไม่สามารถเปลี่ยนได้ ส่วน G5 2024 อัปเกรดได้ทั้ง RAM และ SSD เนื่องจากเป็นรุ่นเก่าที่ออกแบบมาให้ซ่อมง่าย", "8": "อัปเกรดได้เฉพาะ G5 รุ่นใหม่ DDR5 เท่านั้น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 77, "q": "AirBook 14 กับ AirBook 15 เครื่องไหนเป็นแบบไม่มีพัดลม (fanless) ครับ", "choices": {"1": "AirBook 14 เท่านั้นที่เป็น fanless เพราะหน้าจอ 14 นิ้วตัวเล็กใช้พลังงานน้อย ส่วน AirBook 15 จอใหญ่กว่าต้องใช้พัดลมช่วยระบายความร้อน แต่เสียงพัดลมเบามากแทบไม่ได้ยิน", "2": "ทั้งคู่เป็น fanless ไม่มีพัดลมเลยครับ ทั้ง AirBook 14 และ AirBook 15 ใช้ระบบระบายความร้อนแบบ passive", "3": "AirBook 15 เท่านั้นที่ fanless ส่วน AirBook 14 มีพัดลมขนาดเล็ก 1 ตัว", "4": "ทั้งคู่มีพัดลมครับ แต่ใช้พัดลมเสียงเบาเป็นพิเศษ", "5": "AirBook 14 เป็น fanless แต่ AirBook 15 ใช้ dual-fan cooling เพราะต้องรองรับชิป D1 รุ่นพิเศษที่มี TDP สูงกว่าปกติ จอ 15 นิ้ว 2K ต้องการ GPU ที่แรงกว่า ทำให้เครื่องร้อนมากขึ้น", "6": "ทั้งคู่มีพัดลมแต่ AirBook 14 เสียงเบากว่า", "7": "AirBook ทุกรุ่นเป็น fanless หมดเลยครับ ทั้ง AirBook 14 (8GB), AirBook 14 (16GB), AirBook 15 และ AirBook 14 Pro เพราะ DaoNuea ออกแบบชิป D1 ให้ประหยัดพลังงานรองรับ passive cooling ได้ทุกรุ่น", "8": "เฉพาะ AirBook 15 เป็น fanless เพราะเคสใหญ่กว่าระบายความร้อนได้ดี", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 78, "q": "ประกันแบบ on-site ของ StormBook G7 กับ Mini PC M1 ต่างกันยังไงครับ", "choices": {"1": "ทั้งคู่ได้ประกัน on-site 2 ปีเหมือนกัน เพราะเป็นสินค้าแบรนด์ DaoNuea เหมือนกัน ประกัน DaoNuea ทุกสินค้าจะได้ on-site 2 ปีเป็นมาตรฐาน ไม่ว่าจะเป็น laptop หรือ desktop", "2": "G7 ได้ on-site 2 ปี ส่วน M1 ได้ on-site 1 ปี", "3": "G7 ได้ on-site แค่ปีแรก (ปี 2 เป็น drop-off) ส่วน M1 ได้ on-site ตลอด 3 ปี", "4": "G7 ได้ on-site 2 ปีเต็ม ส่วน M1 ไม่มี on-site เลยเพราะเป็น Mini PC ขนาดเล็กน้ำหนักแค่ 0.5 กก. สามารถส่งซ่อมได้ง่าย DaoNuea จึงให้แค่ประกัน drop-off 3 ปี ลูกค้าต้องส่งเครื่องมาเอง", "5": "M1 ได้ on-site 3 ปี ส่วน G7 ไม่มี on-site ต้อง drop-off ตลอด 2 ปี", "6": "ทั้งคู่ได้ on-site 3 ปีเหมือนกัน เพราะเป็นสินค้า DaoNuea", "7": "G7 เป็นแล็ปท็อป ได้ประกัน 2 ปี on-site ทั้งหมด ส่วน M1 เป็น desktop ได้ประกัน 3 ปี แต่เฉพาะปีแรกเป็น on-site ปี 2-3 ต้อง drop-off เพราะ desktop ทำ on-site ได้เฉพาะช่วงแรก", "8": "G7 ได้ on-site 1 ปี ส่วน M1 ไม่มี on-site เลย ต้อง drop-off ทั้งหมด", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 79, "q": "NovaTech SlimBook 14 กับ DaoNuea AirBook 14 ประกันต่างกันยังไงครับ", "choices": {"1": "SlimBook ได้ on-site 2 ปี ส่วน AirBook ได้ drop-off 2 ปี", "2": "ทั้งคู่ได้ประกัน 2 ปี แบบ on-site เหมือนกันทุกอย่าง เพราะราคาใกล้เคียงกัน (SlimBook ฿27,990 / AirBook ฿29,990) สินค้าราคาใกล้กันจะได้บริการประกันแบบเดียวกัน", "3": "SlimBook 14 ได้ประกันแค่ 1 ปี เพราะ NovaTech เป็น partner brand ส่วน AirBook 14 ได้ 2 ปีเพราะเป็น house brand ของฟ้าใหม่ ประกัน partner brand จะสั้นกว่า house brand เสมอ", "4": "ทั้งคู่ประกัน 2 ปี drop-off ไม่มี on-site", "5": "SlimBook ได้ on-site ปีแรก ส่วน AirBook drop-off อย่างเดียว", "6": "ทั้งคู่ประกัน 2 ปี แต่ SlimBook เป็น drop-off ตลอด ส่วน AirBook ปีแรกเป็น on-site ปี 2 เป็น drop-off", "7": "SlimBook ได้ประกัน 2 ปี on-site ปีแรก drop-off ปี 2 แบบเดียวกับ AirBook เพราะทั้งคู่เป็น ultrabook ที่จำหน่ายผ่านฟ้าใหม่ ใช้นโยบายประกันของฟ้าใหม่เหมือนกัน ไม่ต่างกัน", "8": "SlimBook ประกัน 1 ปี ส่วน AirBook ประกัน 3 ปี", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 80, "q": "StormBook G5, G5 รุ่นปี 2024, กับ G7 ตัวไหนใช้ DDR4 ครับ", "choices": {"1": "G5 กับ G5 2024 ใช้ DDR4 ทั้งคู่ ส่วน G7 ใช้ DDR5", "2": "G5 ใช้ DDR4-3200 เพราะเป็นรุ่นราคาประหยัด ส่วน G5 2024 แม้เป็น Clearance แต่อัปเกรดเป็น DDR5-5200 แล้ว และ G7 ใช้ DDR5-5600 ถ้าอยากได้ DDR5 ต้องเลือก G5 2024 หรือ G7", "3": "G7 ใช้ DDR4 ส่วน G5 และ G5 2024 ใช้ DDR5", "4": "ทั้ง 3 รุ่นใช้ DDR5 หมด StormBook series เปลี่ยนมาใช้ DDR5 ทุกรุ่นแล้ว", "5": "ทั้ง 3 รุ่นใช้ DDR4 หมดเลยครับ StormBook series ออกแบบมาให้ผู้ใช้อัปเกรด RAM ด้วยตัวเองจึงเลือกใช้ DDR4 SO-DIMM ที่หาซื้อได้ง่ายและราคาถูกกว่า", "6": "G5 2024 กับ G7 ใช้ DDR4 ส่วน G5 รุ่นปัจจุบันเป็น DDR5", "7": "G5 2024 รุ่นเดียวที่ใช้ DDR4 ส่วน G5 ใช้ DDR5-5200 และ G7 ใช้ DDR5-5600", "8": "G5 ใช้ DDR4-3200 และ G5 2024 ใช้ DDR4-2400 เป็นรุ่นเก่ากว่าอีก ส่วน G7 เป็นรุ่นเดียวที่ใช้ DDR5-5600 เพราะเป็นรุ่นท็อปราคาสูงที่สุด จึงใส่ RAM รุ่นใหม่มา", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 81, "q": "AirBook 14, AirBook 14 รุ่น 8GB, กับ AirBook 15 น้ำหนักเท่าไหร่บ้างครับ", "choices": {"1": "AirBook 14 = 1.1kg, AirBook 14 (8GB) = 1.0kg, AirBook 15 = 1.3kg", "2": "AirBook 14 = 1.3kg, AirBook 14 (8GB) = 1.3kg, AirBook 15 = 1.5kg ทั้ง 3 รุ่นหนักกว่าที่คิดเพราะใช้ตัวเครื่องอลูมิเนียม CNC แบบ aviation-grade ซึ่งแข็งแรงแต่มีน้ำหนัก", "3": "AirBook 14 และ AirBook 14 (8GB) หนัก 1.1kg เท่ากัน ส่วน AirBook 15 หนัก 1.2kg", "4": "AirBook 14 = 1.1kg, AirBook 14 (8GB) = 1.05kg เบากว่าเล็กน้อยเพราะ RAM น้อยกว่า, AirBook 15 = 1.3kg หนักกว่าเพราะจอใหญ่กว่าและแบตใหญ่กว่า", "5": "AirBook 14 = 1.2kg, AirBook 14 (8GB) = 1.2kg, AirBook 15 = 1.4kg", "6": "AirBook 14 และ AirBook 14 (8GB) หนัก 1.1kg เท่ากัน ส่วน AirBook 15 หนัก 1.3kg", "7": "AirBook 14 = 1.1kg, AirBook 14 (8GB) = 1.1kg, AirBook 15 = 1.1kg ทั้ง 3 รุ่นเบาเท่ากันเพราะ DaoNuea ใช้โครงสร้างเดียวกัน ต่างกันแค่ขนาดจอ เปลือกอลูมิเนียมออกแบบให้บางเท่ากัน", "8": "AirBook 14 = 1.3kg, AirBook 14 (8GB) = 1.1kg, AirBook 15 = 1.1kg", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 82, "q": "ถ้าซื้อ StormBook G5, HeadPro X1, กับ Hub 7-in-1 พร้อมกัน ราคารวมเท่าไหร่ครับ ไม่รวมโปรโมชัน", "choices": {"1": "฿45,870", "2": "฿47,370", "3": "฿46,870", "4": "฿44,571", "5": "฿49,870", "6": "฿47,870", "7": "฿48,870", "8": "฿42,870", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 83, "q": "สมาชิกระดับ Gold ซื้อ StormBook G5 ราคา ฿32,990 จะได้กี่ FahMai Points ครับ", "choices": {"1": "329 Points", "2": "660 Points", "3": "495 Points", "4": "493 Points", "5": "494 Points", "6": "330 Points", "7": "0 Points", "8": "165 Points", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 84, "q": "สมาชิก Platinum มี 8,000 Points จะซื้อ CreatorBook 14 ราคา ฿39,990 ใช้ Points ลดได้สูงสุดเท่าไหร่", "choices": {"1": "฿7,998", "2": "฿8,000", "3": "฿2,000", "4": "฿3,200", "5": "฿4,000", "6": "฿3,500", "7": "฿2,667", "8": "฿5,000", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 85, "q": "มีงบ ฿5,000 อยากได้หูฟังครอบหู ซื้อรุ่นไหนได้บ้างครับ", "choices": {"1": "ซื้อได้ 3 รุ่น คือ HeadOn 300 (฿2,490), HeadOn 300 FahMai Edition (฿2,490) และ HeadOn 500 (฿4,990) เพราะมี 3 รุ่นที่ราคาไม่เกิน ฿5,000 ส่วน GameStorm H1 ราคา ฿5,490 เกินงบ", "2": "ซื้อได้ 2 รุ่น คือ HeadOn 300 (฿2,490) และ HeadOn 500 (฿4,990)", "3": "ซื้อได้ 5 รุ่น คือ HeadOn 300, HeadOn 300 FahMai Edition, GameStorm H1, HeadOn 500 และ StudioPro M1 เพราะ StudioPro M1 เป็นหูฟัง studio monitor ราคา ฿4,990 อยู่ในงบพอดี", "4": "ซื้อได้ 4 รุ่น คือ HeadOn 300 (฿2,490), HeadOn 300 FahMai Edition (฿2,490), GameStorm H1 (฿3,490) และ HeadOn 500 (฿4,990)", "5": "ซื้อได้รุ่นเดียว คือ HeadOn 300 (฿2,490) รุ่นอื่นเกิน ฿5,000 ทั้งหมด", "6": "ซื้อได้ 4 รุ่น คือ HeadOn 300, HeadOn 500, StudioPro M1 (฿4,990) และ GameStorm H1 โดย HeadOn 300 FahMai Edition ไม่นับเพราะเป็นรุ่น limited edition ที่หมดสต็อกแล้วไม่สามารถสั่งซื้อได้", "7": "ซื้อได้ 3 รุ่น คือ HeadOn 300, GameStorm H1 และ HeadOn 500", "8": "ไม่มีรุ่นไหนซื้อได้เลยครับ หูฟังครอบหูของคลูนเสียงเริ่มต้นที่ HeadOn 500 ราคา ฿4,990 แต่รวมค่าส่งแล้วจะเกิน ฿5,000 แนะนำเพิ่มงบอีก ฿1,000", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 86, "q": "มีเงิน ฿8,000 อยากซื้อลำโพง ดูได้กี่รุ่นครับ", "choices": {"1": "4 รุ่น คือ Go Mini (฿1,290), Go Mini Twin Pack (฿2,290), HomePod One (฿5,990) และ SoundBar 300 (฿7,990) เฉพาะลำโพงจากร้านฟ้าใหม่ ไม่รวม ArcWave SoundPillar เพราะเป็นแบรนด์พาร์ทเนอร์", "2": "6 รุ่น เพราะ BoomBox X ราคา ฿8,000 พอดีไม่เกินงบ ซื้อได้อีก 1 รุ่น", "3": "5 รุ่น คือ Go Mini (฿1,290), Go Mini Twin Pack (฿2,290), HomePod One (฿5,990), SoundPillar 300 (฿7,490) และ SoundBar 300 (฿7,990)", "4": "3 รุ่น คือ Go Mini (฿1,290), Go Mini Twin Pack (฿2,290) และ HomePod One (฿5,990) ส่วน SoundBar 300 กับ SoundPillar 300 เป็นลำโพง soundbar ต้องแยกหมวดกัน", "5": "4 รุ่น ไม่รวม SoundPillar 300 เพราะเป็นของ ArcWave", "6": "6 รุ่น คือ Go Mini, Go Mini Twin Pack, HomePod One, SoundPillar 300, SoundBar 300 และ BoomBox X เพราะ BoomBox X ราคา ฿7,990 ไม่เกิน ฿8,000 พอดี", "7": "4 รุ่น ไม่รวม Go Mini Twin Pack เพราะเป็นแพ็คคู่ นับเป็นตัวเดียวกับ Go Mini", "8": "3 รุ่น คือ HomePod One, SoundPillar 300, SoundBar 300", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 87, "q": "งบ ฿3,500 อยากซื้อหูฟัง ไม่ว่าจะแบบครอบหูหรือ TWS มีรุ่นไหนให้เลือกบ้าง", "choices": {"1": "4 รุ่น คือ HeadOn 300 (฿2,490), Buds Z1 (฿990), Buds Sport Lite (฿1,990) และ Buds Z3 (฿3,490) ส่วน GameStorm H1 เป็นหูฟังเกมมิ่งไม่นับรวม และ HeadOn 300 FahMai Edition หมดสต็อก", "2": "3 รุ่น คือ HeadOn 300, Buds Z1, Buds Sport Lite", "3": "7 รุ่น รวมทั้ง HeadOn 300, HeadOn 300 FahMai Edition, GameStorm H1, Buds Z1, Buds Sport Lite, Buds Z3 และ Buds Sport X เพราะ Sport X ราคา ฿3,490 เท่ากับ Z3 อยู่ในงบพอดี", "4": "5 รุ่น ไม่รวม HeadOn 300 FahMai Edition เพราะเป็นรุ่น limited edition", "5": "5 รุ่น ไม่รวม GameStorm H1 เพราะเป็นหูฟังเกมมิ่ง", "6": "8 รุ่น รวม HeadOn 500 (฿3,490) และ Buds Sport X (฿2,990) ด้วย เพราะหูฟังราคาไม่เกิน ฿3,500 มีหลายรุ่นมากทั้งสองแบบ", "7": "6 รุ่น คือ ครอบหู HeadOn 300 (฿2,490), HeadOn 300 FahMai Edition (฿2,490), GameStorm H1 (฿3,490) และ TWS Buds Z1 (฿990), Buds Sport Lite (฿1,990), Buds Z3 (฿3,490)", "8": "4 รุ่น คือ HeadOn 300, GameStorm H1, Buds Z1, Buds Z3", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 88, "q": "หาแล็ปท็อปที่เงียบสนิทไม่มีเสียงพัดลมเลย น้ำหนักไม่เกิน 1.2 กิโลกรัม แบตใช้ได้เกิน 15 ชั่วโมง มีรุ่นไหนตรงกับที่ต้องการบ้างครับ", "choices": {"1": "AirBook 15 เท่านั้น เป็นรุ่นเดียวที่ไม่มีพัดลม น้ำหนัก 1.3kg แบต 18 ชม.", "2": "AirBook 14 (16GB) เพียงรุ่นเดียว fanless 1.1kg แบต ~20 ชม. ส่วนรุ่น 8GB ใช้พัดลมขนาดเล็กช่วยระบายความร้อนเพราะ RAM ลดลง", "3": "AirBook 14 ทั้ง 2 รุ่น (16GB และ 8GB) ตรงทุกข้อ — fanless, 1.1kg, แบต ~20 ชม.", "4": "AirBook 14 (16GB), AirBook 14 (8GB), และ AirBook 15 ตรงทั้ง 3 รุ่น ทุกรุ่นเป็น fanless น้ำหนักไม่เกิน 1.2kg และแบตเกิน 15 ชม. ทั้งหมด", "5": "Mini PC M1 ตรงที่สุด fanless เงียบสนิท 0 dB น้ำหนักแค่ 0.5kg", "6": "ProBook 14 (1.6kg, ~12 ชม.) พัดลมเงียบมากแทบไม่ได้ยิน ใกล้เคียง fanless", "7": "ไม่มีรุ่นไหนตรงทุกข้อ AirBook 14 แม้จะ fanless แต่แบตได้แค่ 12 ชม. ส่วน AirBook 15 แบต 18 ชม. แต่หนัก 1.3kg", "8": "AirBook 14 (8GB) รุ่นเดียว เพราะรุ่น 16GB หนัก 1.25kg เกินเล็กน้อย", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 89, "q": "อยากได้สมาร์ทวอทช์ที่วัดคลื่นไฟฟ้าหัวใจได้ จ่ายเงินแตะจากข้อมือได้ ว่ายน้ำได้ งบไม่เกินหมื่น มีรุ่นไหนบ้างครับ", "choices": {"1": "Watch S3 Ultra เหมาะสุด มี ECG NFC Pay กันน้ำ 100m ราคา ฿14,990", "2": "Watch S3 ตัวธรรมดา ราคา ฿5,990 มี ECG NFC Pay ว่ายน้ำได้ ประหยัดสุด", "3": "ทั้ง 3 รุ่น (S3, S3 Pro, S3 Ultra) ตรงทุกข้อเพราะเป็นซีรีส์เดียวกันมีฟีเจอร์เหมือนกัน ต่างกันแค่วัสดุตัวเรือนและราคา", "4": "Watch S3 Pro รุ่นเดียว (฿9,990) มี ECG, NFC Pay, กันน้ำ 5ATM", "5": "Watch S3 Pro และ S3 Ultra ตรงทุกข้อ ราคา ฿9,990 และ ฿14,990", "6": "Watch S3 Ultra เท่านั้น เพราะเป็นรุ่นเดียวที่มี ECG จริง S3 Pro แค่มี SpO2 ไม่มี ECG", "7": "ไม่มีรุ่นไหนในงบหมื่นที่ตรงทุกข้อ S3 Pro มี ECG แต่ไม่มี NFC ต้อง Ultra ขึ้นไป", "8": "Watch S3 Pro ราคา ฿9,990 แต่ว่ายน้ำไม่ได้ กันน้ำแค่ฝนตกหรือล้างมือ ต้อง Ultra ถึงจะว่ายน้ำได้", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 90, "q": "อยากได้หูฟังครอบหูไร้สาย มีตัดเสียงรบกวน รองรับ LDAC แบตอย่างน้อย 30 ชั่วโมง งบไม่เกิน ฿13,000 มีรุ่นไหนบ้าง", "choices": {"1": "HeadOn 500 (฿4,990) ตรงทุกข้อ มี ANC แบต 35 ชม. รองรับ LDAC ประหยัดงบสุด", "2": "HeadOn 300 (฿2,490) แบต 50 ชม. ยาวสุดในกลุ่ม มี ANC และ LDAC", "3": "HeadPro X1 (฿12,990) และ HeadOn 500 (฿4,990) ทั้งสองรุ่น มี ANC และ LDAC", "4": "HeadPro X1 (฿12,990) และ HeadPro X1 SE (฿13,490) สเปคเหมือนกัน ทั้งคู่ตรงทุกข้อ", "5": "HeadPro X1 (฿12,990) รุ่นเดียว — ANC, LDAC, แบต 30 ชม.", "6": "HeadOn 500 (฿4,990) เป็นรุ่นเดียวที่มี LDAC ในงบ ส่วน HeadPro X1 ราคาเกินงบ", "7": "ไม่มีรุ่นไหนตรง หูฟังคลื่นเสียงที่มี LDAC คือ HeadPro X1 Pro ราคา ฿16,990 เกินงบ", "8": "หูฟังคลื่นเสียงทุกรุ่นรองรับ LDAC เพราะเป็นแบรนด์ Hi-Res Audio ต่างกันแค่ ANC กับไม่มี ANC เท่านั้น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 91, "q": "หูฟัง TWS มี ANC รองรับ Hi-Res Audio เคสชาร์จไร้สาย Qi ได้ มีรุ่นไหนบ้าง ราคาเท่าไหร่", "choices": {"1": "Buds Z5 (฿5,490) ตรงทุกข้อ มี ANC Hi-Res เคสชาร์จ Qi ราคาประหยัดกว่า Z5 Pro", "2": "Buds Z5 Pro (฿7,990) และ NovaBuds Pro (฿5,990) ทั้งสองรุ่นมี ANC Hi-Res และเคสชาร์จ Qi", "3": "NovaBuds Pro (฿5,990) เท่านั้น มี ANC Hi-Res เคสชาร์จ Qi ประหยัดกว่า Z5 Pro ตั้ง ฿2,000", "4": "Buds Z5 Pro (฿7,990) รุ่นเดียว — ANC, Hi-Res, เคสชาร์จ Qi", "5": "Buds Z5 Pro (฿7,990) และ Buds Z5 (฿5,490) ทั้งสองรุ่น Z5 ซีรีส์ สเปคเหมือนกันทุกอย่างต่างกันแค่สี", "6": "หูฟัง TWS ของฟ้าใหม่ทุกรุ่นที่มี ANC รองรับ Hi-Res และ Qi ทั้งหมด ต่างกันแค่ราคาและจำนวนไมค์", "7": "ไม่มีรุ่นไหนตรง หูฟัง TWS ของฟ้าใหม่ไม่มีรุ่นไหนรองรับ Hi-Res Audio", "8": "NovaBuds Pro (฿5,990) รุ่นเดียวที่มี Hi-Res ส่วน Z5 Pro มี ANC กับ Qi แต่ไม่มี Hi-Res", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 92, "q": "หูฟังไร้สายทุกแบบ ไม่ว่า TWS หรือครอบหู ที่มี ANC รองรับ LDAC ราคาไม่เกิน ฿8,000 มีรุ่นไหนบ้าง", "choices": {"1": "HeadPro X1 (฿12,990) เท่านั้น เป็นรุ่นเดียวที่มี ANC + LDAC", "2": "HeadOn 500 (฿4,990) มี ANC + LDAC ในงบสบาย ถูกกว่า X1 เกือบ ฿8,000", "3": "Buds Z5 Pro (฿7,990) และ HeadOn 500 (฿4,990) ทั้งสอง ANC + LDAC ในงบ", "4": "Buds Z5 Pro (฿7,990) รุ่นเดียวในงบ — ANC, LDAC, ฿7,990", "5": "HeadPro X1 (฿12,990) และ Buds Z5 Pro (฿7,990) ทั้งสองมี ANC + LDAC ทั้งคู่อยู่ในงบ ฿8,000", "6": "NovaBuds Pro (฿5,990) ถูกสุดในกลุ่มที่มี ANC + LDAC ส่วน Z5 Pro ก็ตรงแต่แพงกว่า", "7": "ไม่มีรุ่นไหนตรง หูฟังที่มี LDAC ต้อง HeadPro X1 ราคา ฿12,990 เกินงบ", "8": "Buds Z5 (฿5,490) ตรงทุกข้อ มี ANC + LDAC ในงบ ส่วน Z5 Pro แพงกว่าโดยไม่จำเป็น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 93, "q": "เพื่อนบอกว่า HeadPro X1 กับ HeadOn 500 สเปคเหมือนกัน ใช้ HeadOn 500 ประหยัดกว่า จริงไหมครับ", "choices": {"1": "จริงครับ สเปคหลักเหมือนกัน HeadOn 500 ประหยัดกว่าตั้ง ฿8,000", "2": "ไม่จริง X1 มี ANC ตัดเสียง ส่วน HeadOn 500 ไม่มี ANC ตัดเสียงไม่ได้เลย", "3": "ไม่จริง X1 ไดรเวอร์ 50mm ส่วน HeadOn 500 ใช้ 40mm เสียงต่างกันมาก", "4": "ไม่จริง X1 แบต 50 ชม. ส่วน HeadOn 500 แบตแค่ 20 ชม. อึดต่างกันเท่าตัว", "5": "ไม่จริง X1 มี LDAC Hi-Res Multipoint BT 5.3 ส่วน HeadOn 500 ไม่มี", "6": "ไม่จริง X1 มี Multipoint แค่อย่างเดียวที่ต่าง นอกนั้นเหมือนกันหมด รวมถึง LDAC และ Hi-Res ที่ทั้งคู่มีเหมือนกัน", "7": "ไม่จริง X1 มี LDAC ส่วน HeadOn 500 มี aptX HD แทน ทั้งคู่ฟังเพลงคุณภาพสูงได้เหมือนกันแค่ใช้คนละ codec", "8": "ไม่จริง X1 ชาร์จ USB-C ส่วน HeadOn 500 ยังใช้ micro-USB รุ่นเก่า ชาร์จช้ากว่า", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 94, "q": "เพื่อนบอกว่า StormBook G5 กับ G5 รุ่นปี 2024 สเปคเหมือนกัน รุ่น 2024 แค่ปรับดีไซน์ใหม่ จริงไหมครับ", "choices": {"1": "จริงครับ สเปคเหมือนกันทุกอย่าง รุ่น 2024 แค่ปรับดีไซน์ตัวเครื่องใหม่เท่านั้น", "2": "ไม่จริง G5 จอ 15.6 นิ้ว 120Hz ส่วน G5 2024 จอ 14 นิ้ว 60Hz ขนาดจอต่างกันชัดเจน", "3": "ไม่จริง G5 ใช้ WiFi 6 ส่วน G5 2024 ยังใช้ WiFi 5 รุ่นเก่า เล่นเกมออนไลน์แล้ว ping ต่างกัน", "4": "ไม่จริง G5 ใช้ DDR5 + GX-4060 แบต 72Wh ส่วน G5 2024 ใช้ DDR4 + GX-3060 แบต 65Wh", "5": "ไม่จริง G5 อัปเกรด RAM ได้ ส่วน G5 2024 เป็น RAM บัดกรีอัปเกรดไม่ได้", "6": "ไม่จริง G5 ใช้ SSD NVMe ส่วน G5 2024 ยังใช้ HDD หมุน ความเร็วอ่านเขียนต่างกันหลายเท่า", "7": "ไม่จริง G5 มี RGB keyboard ส่วน G5 2024 ไฟคีย์บอร์ดสีขาวอย่างเดียว ไม่มี RGB", "8": "ไม่จริง G5 2024 สเปคดีกว่า G5 ทุกอย่าง ทั้ง GPU RAM และแบต เพราะเป็นรุ่นใหม่กว่า", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 95, "q": "ซื้อแท่นชาร์จ QiPad 15 มาชาร์จนาฬิกา Watch S3 Ultra ได้ไหมครับ", "choices": {"1": "ได้ครับ QiPad 15 ชาร์จอุปกรณ์ Qi ได้ทุกรุ่น Watch S3 Ultra ก็เป็น wireless ชาร์จได้", "2": "ได้ แต่ชาร์จช้ากว่าปกติเพราะนาฬิกาใช้พลังงานน้อย", "3": "ไม่ได้ QiPad 15 ชาร์จได้เฉพาะ iPhone เท่านั้น", "4": "ไม่ได้ QiPad 15 เป็นมาตรฐาน Qi สำหรับสมาร์ทโฟน แต่ Watch S3 Ultra ใช้ระบบชาร์จแม่เหล็กเฉพาะ", "5": "ได้ครับ แต่ต้องซื้ออะแดปเตอร์แปลง Qi-to-Magnetic เพิ่มราคา ฿590 ขายที่ร้านฟ้าใหม่ มีให้เลือกสีขาวกับสีดำ รองรับนาฬิกาวงโคจรทุกรุ่นทั้ง S3 Ultra S3 Pro และ S3 SE ชาร์จได้ทุกรุ่น", "6": "ไม่ได้ Watch S3 Ultra ต้องชาร์จผ่าน USB-C เท่านั้น ไม่มีระบบชาร์จไร้สาย", "7": "ได้ครับ วางนาฬิกาตรงกลางแท่นชาร์จ QiPad ชาร์จได้เลย", "8": "ไม่ได้ QiPad 15 รองรับเฉพาะสายฟ้าโฟนเท่านั้น ไม่รองรับแบรนด์อื่น", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 96, "q": "ซื้อแท่นชาร์จ PulseGear ChargePad 15W มา อยากวางเคสหูฟัง NovaBuds Pro ชาร์จไร้สายได้ไหมครับ", "choices": {"1": "ได้ครับ ChargePad 15W ชาร์จอุปกรณ์ Qi ทุกรุ่น เคสหูฟังก็ชาร์จได้", "2": "ได้ แต่ชาร์จช้ามาก เพราะเคสหูฟังรับไฟได้แค่ 5W", "3": "ได้ครับ วางเคสหูฟัง NovaBuds Pro บนแท่น ChargePad 15W ได้เลย เคสรุ่นนี้มีขดลวด Qi ในตัว รองรับการชาร์จไร้สายได้ถึง 5W เต็มจาก 0% ใช้เวลาประมาณ 2 ชั่วโมง ไฟ LED จะเป็นสีเขียวเมื่อชาร์จเต็ม", "4": "ไม่ได้ ChargePad 15W ชาร์จได้เฉพาะสมาร์ทโฟน ไม่รองรับอุปกรณ์อื่น", "5": "ไม่ได้ เคส NovaBuds Pro ชาร์จผ่าน USB-C เท่านั้น ไม่รองรับชาร์จไร้สาย", "6": "ได้ แต่ต้องอัปเดตเฟิร์มแวร์เคสหูฟังก่อน", "7": "ไม่ได้ ต้องซื้อ ChargePad รุ่น Pro ที่รองรับ TWS case โดยเฉพาะ", "8": "ได้ แต่ต้องถอดหูฟังออกจากเคสก่อนชาร์จ", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 97, "q": "ซื้อ ArcWave SoundPillar 300 มา ทำตกพื้นเสียหาย จะเคลมประกันหรือ Care+ ได้ไหมครับ", "choices": {"1": "เคลมประกันได้ครับ ArcWave มีประกัน 18 เดือนครอบคลุมทุกกรณี", "2": "เคลมประกันไม่ได้ แต่ซื้อ Care+ คุ้มครองอุบัติเหตุได้ จ่ายปีละ 10% ของราคาสินค้า", "3": "เคลมประกันได้ครับ ArcWave SoundPillar 300 มีประกันจากผู้ผลิต 18 เดือน ครอบคลุมความเสียหายทุกประเภทรวมถึงอุบัติเหตุ เพียงนำสินค้าพร้อมใบเสร็จมาที่ศูนย์บริการ ArcWave หรือสาขาฟ้าใหม่ทุกสาขา", "4": "ซื้อ Care+ เพิ่มได้ ฿590 ต่อปี คุ้มครองตกกระแทก", "5": "เคลม Care+ ได้ จ่ายค่าซ่อมส่วนต่าง 30% ของราคาสินค้า", "6": "ต้องส่งซ่อมที่ศูนย์ ArcWave โดยตรง ไม่ผ่านฟ้าใหม่", "7": "ไม่ได้ทั้งสองทาง ประกันปกติไม่คุ้มครองอุบัติเหตุ และ Care+ ไม่รับแบรนด์พันธมิตรอย่าง ArcWave", "8": "ไม่ได้ แต่ซื้อประกันเพิ่มจากบริษัทประกันภัยภายนอกได้", "9": "ไม่มีข้อมูลนี้ในฐานข้อมูล", "10": "คำถามนี้ไม่เกี่ยวข้องกับฐานข้อมูลสินค้า"}}, {"id": 98, "q": "สั่งซื้อ SoundBar Pro 500 ราคา ฿15,990 จัดส่งไปที่อพาร์ทเมนต์ชั้น 6 ไม่มีลิฟต์ ในกรุงเทพฯ ต้องจ่ายค่าจัดส่งรวมทั้งหมดเท่าไหร่ครับ", "choices": {"1": "ฟรี เพราะมูลค่าสั่งซื้อเกิน ฿500", "2": "฿200 เฉพาะค่าจัดส่งสินค้าหนักเกิน 30 กก. เพียงอย่างเดียว ค่าจัดส่งมาตรฐานฟรีเพราะยอดเกิน ฿500 และค่าขนขึ้นชั้นรวมอยู่ในค่าจัดส่งสินค้าหนักแล้ว", "3": "฿300 คือค่าสินค้าหนัก ฿200 + ค่าขนขึ้นชั้น 6 อีก ฿100", "4": "฿400 คือค่าสินค้าหนัก ฿200 + ค่าขนขึ้นชั้น 5 และ 6 (฿100 × 2 ชั้น)", "5": "฿500 คือค่าสินค้าหนัก ฿200 + ค่าขนชั้น 4, 5, 6 (฿100 × 3 ชั้น)", "6": "฿800 คือค่าสินค้าหนัก ฿200 + ค่าขนทุกชั้น ฿100 × 6 ชั้น", "7": "฿100 ค่าขนขึ้นชั้นอย่างเดียว เพราะจัดส่งฟรีรวมค่าสินค้าหนักแล้วสำหรับยอดเกิน ฿500 ค่าสินค้าหนักจะถูกยกเว้นเมื่อยอดสั่งซื้อเกิน ฿10,000", "8": "฿350 คือค่าจัดส่งมาตรฐาน ฿50 + ค่าสินค้าหนัก ฿200 + ค่าขนชั้น ฿100", "9": "ไม่มีข้อมูลเพียงพอในฐานข้อมูลสำหรับคำนวณค่าจัดส่ง", "10": "คำถามนี้ไม่เกี่ยวข้องกับร้านฟ้าใหม่"}}, {"id": 99, "q": "สั่ง PulseGear Power Bank 30,000 mAh ส่งไปเกาะสมุย ใช้เวลาจัดส่งประมาณกี่วันทำการครับ", "choices": {"1": "1-2 วันทำการ ถ้าสั่งก่อนเที่ยงวัน", "2": "3-5 วันทำการ ตามตารางจัดส่งภาคใต้", "3": "5-7 วันทำการ ตามตารางจัดส่งพื้นที่เกาะ", "4": "8-12 วันทำการ เพราะเป็นเกาะ (5-7 วัน) + ส่งทางอากาศไม่ได้ต้องไปทางบก/เรือ (เพิ่ม 3-5 วัน)", "5": "10-14 วันทำการ เนื่องจากแบตสำรองเกิน 20,000 mAh ต้องส่งทางเรืออย่างเดียว ไม่สามารถส่งทางบกได้ การขนส่งทางเรือไปเกาะสมุยใช้เวลานานกว่าทางบกมาก บวกกับเวลาจัดส่งปกติอีก 5-7 วัน", "6": "ไม่สามารถจัดส่งได้ เพราะ Power Bank เกิน 20,000 mAh ห้ามจัดส่งไปพื้นที่เกาะโดยเด็ดขาดตามข้อกำหนด IATA", "7": "15-20 วันทำการ เพราะต้องส่งเป็นพัสดุพิเศษทางเรือ", "8": "2-3 วันทำการ ถ้าเลือก Express", "9": "ไม่มีข้อมูลเพียงพอในฐานข้อมูลสำหรับตอบคำถามนี้", "10": "คำถามนี้ไม่เกี่ยวข้องกับร้านฟ้าใหม่"}}, {"id": 100, "q": "สตอร์มบุ๊ก G5 ราคา ฿27,990 ซื้อมาได้ 5 วัน ยังไม่แกะกล่อง อยากคืนสินค้าได้ไหมครับ", "choices": {"1": "คืนได้ครับ เพราะอยู่ภายใน 15 วัน และยังไม่แกะกล่อง ตรงตามเงื่อนไขนโยบายคืนสินค้าของฟ้าใหม่ทุกข้อ ทั้งสภาพสมบูรณ์ บรรจุภัณฑ์ครบ และภายในกรอบเวลา จ่ายค่าส่งคืน ฿50-฿150", "2": "คืนได้ แต่ต้องไปคืนที่สาขาฟ้าใหม่เท่านั้นเพราะเป็นสินค้าราคาเกิน ฿25,000", "3": "ไม่ได้ครับ สตอร์มบุ๊ก G5 ราคา ฿27,990 เป็นสินค้า Clearance ลดล้างสต็อก ไม่รับคืนไม่ว่ากรณีใด", "4": "คืนได้ แต่หัก 5% ค่าดำเนินการเพราะเป็นสินค้าโปรโมชัน", "5": "คืนได้ภายใน 7 วันเท่านั้น เพราะเป็นสินค้าช่วง Mega Sale", "6": "ไม่ได้เพราะเลย 3 วันแล้ว สินค้าลดราคาพิเศษมีเงื่อนไขคืนได้ภายใน 3 วันเท่านั้น ต้องรีบตัดสินใจให้เร็วกว่านี้ กรุณาตรวจสอบสเปคให้ดีก่อนซื้อทุกครั้ง", "7": "คืนได้ แต่ได้คืนเป็น FahMai Wallet เครดิตเท่านั้น ไม่คืนเงินสด", "8": "ไม่ได้ เพราะ StormBook G5 เป็นสินค้า Pre-order ที่จัดส่งแล้ว ต้องใช้นโยบายคืนสินค้าไม่ใช่ยกเลิก", "9": "ไม่มีข้อมูลเพียงพอในฐานข้อมูลสำหรับตอบคำถามนี้", "10": "คำถามนี้ไม่เกี่ยวข้องกับร้านฟ้าใหม่"}}];
+
+// Question category hints for badge
+const CATEGORIES = {
+  53:'noinfo',54:'noinfo',55:'noinfo',56:'noinfo',57:'noinfo',58:'noinfo',59:'noinfo',
+  60:'offtopic',61:'offtopic',62:'offtopic',63:'offtopic',
+  82:'math',83:'math',84:'math',98:'math',99:'math'
+};
+function getCat(id) {
+  if (CATEGORIES[id] === 'noinfo') return ['cat-noinfo','→ 9'];
+  if (CATEGORIES[id] === 'offtopic') return ['cat-offtopic','→ 10'];
+  if (CATEGORIES[id] === 'math') return ['cat-math','calc'];
+  const q = QUESTIONS.find(q=>q.id===id);
+  const text = q ? q.q : '';
+  if (text.includes('นโยบาย') || text.includes('คืน') || text.includes('ยกเลิก') ||
+      text.includes('ส่ง') || text.includes('ประกัน') || text.includes('จัดส่ง'))
+    return ['cat-policy','policy'];
+  return ['cat-product','product'];
+}
+
+let current = 1;
+const answers = {};
+const flags = {};
+const comments = {};
+
+// Build sidebar dots
+const grid = document.getElementById('q-grid');
+QUESTIONS.forEach(q => {
+  const dot = document.createElement('div');
+  dot.className = 'q-dot';
+  dot.textContent = q.id;
+  dot.id = 'dot-' + q.id;
+  dot.onclick = () => goTo(q.id);
+  grid.appendChild(dot);
+});
+
+function goTo(id) {
+  current = id;
+  render();
+  // Scroll dot into view
+  const dot = document.getElementById('dot-' + id);
+  if (dot) dot.scrollIntoView({ block: 'nearest' });
+}
+
+function navigate(dir) {
+  const idx = QUESTIONS.findIndex(q => q.id === current);
+  const next = QUESTIONS[idx + dir];
+  if (next) goTo(next.id);
+}
+
+function jumpTo() {
+  const val = parseInt(document.getElementById('jump-input').value);
+  if (val >= 1 && val <= 100) { goTo(val); document.getElementById('jump-input').value = ''; }
+}
+document.getElementById('jump-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') jumpTo();
+});
+
+function selectAnswer(num) {
+  answers[current] = num;
+  updateDot(current);
+  updateProgress();
+  render();
+}
+
+function clearAnswer() {
+  delete answers[current];
+  updateDot(current);
+  updateProgress();
+  render();
+}
+
+function updateDot(id) {
+  const dot = document.getElementById('dot-' + id);
+  const ans = answers[id];
+  dot.className = 'q-dot';
+  if (id === current) dot.classList.add('active');
+  if (ans !== undefined) {
+    if (ans == 9) dot.classList.add('choice9');
+    else if (ans == 10) dot.classList.add('choice10');
+    else dot.classList.add('answered');
+  }
+  if (flags[id]) dot.classList.add('flagged');
+}
+
+function toggleFlag() {
+  if (flags[current]) delete flags[current];
+  else flags[current] = true;
+  updateDot(current);
+  renderFlagBtn();
+}
+
+function renderFlagBtn() {
+  const btn = document.getElementById('flag-btn');
+  if (flags[current]) { btn.textContent = 'Flagged'; btn.classList.add('flagged'); }
+  else { btn.textContent = 'Flag'; btn.classList.remove('flagged'); }
+}
+
+function saveComment(val) {
+  if (val.trim()) comments[current] = val;
+  else delete comments[current];
+}
+
+function importCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.trim().split('\n');
+    let imported = 0;
+    lines.forEach(line => {
+      const [id, ans] = line.split(',');
+      const idNum = parseInt(id);
+      const ansNum = parseInt(ans);
+      if (!isNaN(idNum) && !isNaN(ansNum)) {
+        answers[idNum] = ansNum;
+        imported++;
+      }
+    });
+    QUESTIONS.forEach(q => updateDot(q.id));
+    updateProgress();
+    render();
+    alert('Imported ' + imported + ' answers.');
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function updateProgress() {
+  const count = Object.keys(answers).length;
+  document.getElementById('progress-text').textContent = count + ' / 100 answered';
+  document.getElementById('progress-bar').style.width = (count) + '%';
+}
+
+function render() {
+  const q = QUESTIONS.find(q => q.id === current);
+  if (!q) return;
+
+  // Update all dots (active state changes)
+  QUESTIONS.forEach(q => updateDot(q.id));
+
+  // Header
+  document.getElementById('q-id-badge').textContent = 'Q' + String(q.id).padStart(3,'0');
+  const [catClass, catLabel] = getCat(q.id);
+  const badge = document.getElementById('q-category-badge');
+  badge.className = 'q-category-badge ' + catClass;
+  badge.textContent = catLabel;
+
+  // Question text
+  document.getElementById('q-text').textContent = q.q;
+
+  // Choices
+  const grid = document.getElementById('choices-grid');
+  grid.innerHTML = '';
+  Object.entries(q.choices).forEach(([num, text]) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    if (num == 9 || num == 10) btn.classList.add('choice-special');
+    if (num == 9) btn.classList.add('c9');
+    if (num == 10) btn.classList.add('c10');
+    if (answers[current] == num) btn.classList.add('selected');
+
+    // Full width for long choices or 9/10
+    if (num == 9 || num == 10 || text.length > 60) {
+      btn.style.gridColumn = '1 / -1';
+    }
+
+    btn.innerHTML = '<span class="choice-num">' + num + '</span><span class="choice-text">' + text + '</span>';
+    btn.onclick = () => selectAnswer(parseInt(num));
+    grid.appendChild(btn);
+  });
+
+  // Footer answer display
+  const ans = answers[current];
+  const display = document.getElementById('answer-display');
+  if (ans !== undefined) {
+    display.textContent = ans + ' — ' + (q.choices[ans] || '');
+    display.style.color = ans == 9 ? '#a78bfa' : ans == 10 ? '#fb923c' : '#3ecf8e';
+  } else {
+    display.textContent = '—';
+    display.style.color = '#8892b0';
+  }
+
+  // Flag + comment sync
+  renderFlagBtn();
+  document.getElementById('comment-input').value = comments[current] || '';
+
+  // Export btn state
+  document.getElementById('export-btn').textContent =
+    'Export CSV (' + Object.keys(answers).length + ')';
+}
+
+function exportCSV() {
+  let csv = 'id,answer\n';
+  QUESTIONS.forEach(q => {
+    const ans = answers[q.id];
+    csv += q.id + ',' + (ans !== undefined ? ans : '') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'submission.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const key = e.key;
+  if (key === 'ArrowRight' || key === 'ArrowDown') { e.preventDefault(); navigate(1); }
+  if (key === 'ArrowLeft'  || key === 'ArrowUp')   { e.preventDefault(); navigate(-1); }
+  if (key >= '1' && key <= '9') selectAnswer(parseInt(key));
+  if (key === '0') selectAnswer(10);
+  if (key === 'Backspace' || key === 'Delete') clearAnswer();
+});
+
+// Init
+render();
+updateProgress();
+</script>
+</body>
+</html>
