@@ -324,6 +324,19 @@
   }
   #export-btn:hover { opacity: 0.85; }
   #export-btn:disabled { opacity: 0.4; cursor: default; }
+  #export-notes-btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid var(--accent-border);
+    padding: 7px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  #export-notes-btn:hover { background: var(--accent-dim); }
 
   /* ── IMPORT / FLAG / COMMENT ── */
   #import-btn {
@@ -348,15 +361,33 @@
     padding: 4px 10px;
     border-radius: 4px;
     cursor: pointer;
-    border: 1px solid rgba(245,166,35,0.3);
     background: none;
-    color: var(--amber);
     transition: all 0.15s;
   }
-  .flag-btn:hover { background: var(--amber-dim); }
-  .flag-btn.flagged { background: var(--amber-dim); border-color: var(--amber); font-weight: 600; }
+  #flag-green {
+    border: 1px solid rgba(62,207,142,0.3);
+    color: var(--green);
+  }
+  #flag-green:hover { background: var(--green-dim); }
+  #flag-green.flagged { background: var(--green-dim); border-color: var(--green); font-weight: 600; }
 
-  .q-dot.flagged::after {
+  #flag-yellow {
+    border: 1px solid rgba(245,166,35,0.3);
+    color: var(--amber);
+  }
+  #flag-yellow:hover { background: var(--amber-dim); }
+  #flag-yellow.flagged { background: var(--amber-dim); border-color: var(--amber); font-weight: 600; }
+
+  .q-dot { position: relative; }
+  .q-dot.flag-green::after {
+    content: '';
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+  .q-dot.flag-yellow::after {
     content: '';
     position: absolute;
     top: 2px; right: 2px;
@@ -364,7 +395,6 @@
     border-radius: 50%;
     background: var(--amber);
   }
-  .q-dot { position: relative; }
 
   #comment-wrap {
     padding: 0 28px 16px;
@@ -439,7 +469,8 @@
       <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>→ 9</div>
       <div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div>→ 10</div>
       <div class="legend-item"><div class="legend-dot" style="background:#2a2f45"></div>blank</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#f5a623;border-radius:50%"></div>flagged</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3ecf8e;border-radius:50%"></div>green flag</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f5a623;border-radius:50%"></div>yellow flag</div>
     </div>
     <label id="import-btn" title="Import submission.csv (id,answer)">
       <input type="file" id="import-input" accept=".csv" style="display:none" onchange="importCSV(this)">
@@ -467,8 +498,10 @@
   <div id="q-footer">
     <div id="current-answer">Answer: <span id="answer-display">—</span></div>
     <button class="clear-btn" onclick="clearAnswer()">Clear</button>
-    <button class="flag-btn" id="flag-btn" onclick="toggleFlag()">Flag</button>
+    <button class="flag-btn" id="flag-green" onclick="toggleFlag('green')">Green Flag</button>
+    <button class="flag-btn" id="flag-yellow" onclick="toggleFlag('yellow')">Yellow Flag</button>
     <button id="export-btn" onclick="exportCSV()">Export CSV</button>
+    <button id="export-notes-btn" onclick="exportNotes()">Export Notes</button>
   </div>
 </div>
 
@@ -555,20 +588,25 @@ function updateDot(id) {
     else if (ans == 10) dot.classList.add('choice10');
     else dot.classList.add('answered');
   }
-  if (flags[id]) dot.classList.add('flagged');
+  if (flags[id] === 'green') dot.classList.add('flag-green');
+  else if (flags[id] === 'yellow') dot.classList.add('flag-yellow');
 }
 
-function toggleFlag() {
-  if (flags[current]) delete flags[current];
-  else flags[current] = true;
+function toggleFlag(color) {
+  if (flags[current] === color) delete flags[current];
+  else flags[current] = color;
   updateDot(current);
-  renderFlagBtn();
+  renderFlagBtns();
 }
 
-function renderFlagBtn() {
-  const btn = document.getElementById('flag-btn');
-  if (flags[current]) { btn.textContent = 'Flagged'; btn.classList.add('flagged'); }
-  else { btn.textContent = 'Flag'; btn.classList.remove('flagged'); }
+function renderFlagBtns() {
+  const f = flags[current];
+  const gBtn = document.getElementById('flag-green');
+  const yBtn = document.getElementById('flag-yellow');
+  gBtn.textContent = f === 'green' ? 'Green ✓' : 'Green Flag';
+  gBtn.classList.toggle('flagged', f === 'green');
+  yBtn.textContent = f === 'yellow' ? 'Yellow ✓' : 'Yellow Flag';
+  yBtn.classList.toggle('flagged', f === 'yellow');
 }
 
 function saveComment(val) {
@@ -657,7 +695,7 @@ function render() {
   }
 
   // Flag + comment sync
-  renderFlagBtn();
+  renderFlagBtns();
   document.getElementById('comment-input').value = comments[current] || '';
 
   // Export btn state
@@ -676,6 +714,26 @@ function exportCSV() {
   const a = document.createElement('a');
   a.href = url;
   a.download = 'submission.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportNotes() {
+  const rows = QUESTIONS
+    .filter(q => flags[q.id] || comments[q.id])
+    .map(q => {
+      const ans = answers[q.id] !== undefined ? answers[q.id] : '';
+      const flag = flags[q.id] || '';
+      const note = (comments[q.id] || '').replace(/"/g, '""');
+      return q.id + ',' + ans + ',' + flag + ',"' + note + '"';
+    });
+  if (!rows.length) { alert('No flags or comments to export.'); return; }
+  const csv = 'id,answer,flag,comment\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'notes.csv';
   a.click();
   URL.revokeObjectURL(url);
 }
